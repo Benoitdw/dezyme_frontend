@@ -9,7 +9,7 @@
 
 	let { onLoaded, onError }: Props = $props();
 
-	let inputValue = $state('');
+	let inputValue = $state('3BIO');
 	let detectedType = $derived(inputValue.trim().length >= 4 ? detectInputType(inputValue) : null);
 	let loading = $state(false);
 	let dragging = $state(false);

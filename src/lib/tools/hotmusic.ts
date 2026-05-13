@@ -9,5 +9,19 @@ export const hotmusic: ToolConfig = {
 		preselect: (chains) => chains.slice(0, 1),
 		multiple: false
 	},
-	fields: []
+	fields: [],
+	description:
+		'HoTMuSiC predicts the change in melting temperature (ΔTm) caused by single-site mutations in proteins. It relies on statistical potentials derived from thermophilic and mesophilic protein structures and experimental stability data.',
+	tags: ['thermal stability', 'ΔTm', 'melting temperature', 'single mutations'],
+	doi: '10.1093/bioinformatics/btv595',
+	bibTeX: `@article{Pucci2016,
+  author  = {Pucci, Fabrizio and Bourgeas, Romain and Rooman, Marianne},
+  title   = {Predicting protein thermal stability changes upon point mutations using statistical potentials: Introducing HoTMuSiC},
+  journal = {Scientific Reports},
+  year    = {2016},
+  volume  = {6},
+  pages   = {23257},
+  doi     = {10.1038/srep23257}
+}`,
+	logoPath: '/logos/hotmusic.svg'
 };

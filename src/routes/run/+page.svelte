@@ -9,6 +9,7 @@
 	import { submitAnalysis } from '$lib/utils/api';
 	import { addJob } from '$lib/utils/storage';
 	import type { PdbMetadata as PdbMeta } from '$lib/utils/pdb';
+	import SoftIdCard from '$lib/components/SoftIdCard.svelte';
 
 	let selectedTool = $state<ToolId>(($page.url.searchParams.get('tool') as ToolId) ?? 'popmusic');
 	let pdbMeta = $state<PdbMeta | null>(null);
@@ -71,6 +72,8 @@
 	</div>
 
 	<div class="form-card">
+		<SoftIdCard {tool} />
+
 		<section class="section">
 			<label class="section-label">Structure</label>
 			<PdbInput onLoaded={onPdbLoaded} onError={onPdbError} />
@@ -110,7 +113,7 @@
 
 <style>
 	.page {
-		max-width: 680px;
+		max-width: 960px;
 		margin: 0 auto;
 		padding: 2.5rem 2rem;
 	}

@@ -21,4 +21,9 @@ export interface ToolConfig {
 	accent: string;
 	chainRule: ChainRule;
 	fields: ToolField[];
+	description?: string;
+	tags?: string[];
+	doi?: string;
+	bibTeX?: string;
+	logoPath?: string;
 }
