@@ -82,22 +82,46 @@
 		</div>
 		<div class="meta-row">
 			<span class="meta-label">Name</span>
-			<span class="meta-value">{meta.name}</span>
+			<span class="meta-value meta-value--name">{meta.name}</span>
 		</div>
-		<div class="meta-row">
-			<span class="meta-label">Chains</span>
-			<span class="meta-value">{meta.chains.join(', ')}</span>
-		</div>
-		{#if meta.resolution}
+		{#if meta.experimentType}
 			<div class="meta-row">
-				<span class="meta-label">Resolution</span>
-				<span class="meta-value">{meta.resolution}</span>
+				<span class="meta-label">Type</span>
+				<span class="meta-value">{meta.experimentType}</span>
 			</div>
 		{/if}
 		{#if meta.organism}
 			<div class="meta-row">
 				<span class="meta-label">Organism</span>
 				<span class="meta-value">{meta.organism}</span>
+			</div>
+		{/if}
+		<div class="meta-row">
+			<span class="meta-label">Chains</span>
+			<span class="meta-value">{meta.chains.join(', ')}</span>
+		</div>
+		{#if meta.residueCount !== undefined}
+			<div class="meta-row">
+				<span class="meta-label">Residues</span>
+				<span class="meta-value">{meta.residueCount}</span>
+			</div>
+		{/if}
+		{#if meta.ligandCount !== undefined && meta.ligandCount > 0}
+			<div class="meta-row">
+				<span class="meta-label">Ligands</span>
+				<span class="meta-value">{meta.ligandCount}</span>
+			</div>
+		{/if}
+		{#if meta.resolution}
+			<div class="meta-row">
+				<span class="meta-label">Resolution</span>
+				<span class="meta-value">{meta.resolution} Å</span>
+			</div>
+		{/if}
+		{#if meta.rFactor !== undefined}
+			<div class="meta-row">
+				<span class="meta-label">R-factor</span>
+				<span class="meta-value">{meta.rFactor.toFixed(3)}</span>
 			</div>
 		{/if}
 	</div>
@@ -124,7 +148,7 @@
 		padding: 1rem 1.25rem;
 		display: flex;
 		gap: 1rem;
-		align-items: stretch;
+		align-items: center;
 	}
 
 	.meta-rows {
@@ -150,6 +174,18 @@
 	.meta-value {
 		color: var(--text);
 		font-family: monospace;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.meta-value--name {
+		font-family: inherit;
+		font-size: 0.82rem;
+		white-space: normal;
+		overflow: visible;
+		text-overflow: unset;
+		line-height: 1.4;
 	}
 
 	.viewer-wrap {
@@ -158,7 +194,9 @@
 		flex-shrink: 0;
 		border-radius: 0.5rem;
 		overflow: hidden;
-		display: block;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		cursor: pointer;
 		transition: opacity 0.15s;
 	}

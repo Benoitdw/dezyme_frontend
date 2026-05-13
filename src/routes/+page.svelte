@@ -5,115 +5,265 @@
 	import { getRecentJobs } from '$lib/utils/storage';
 	import type { StoredJob } from '$lib/utils/storage';
 
+	const CYCLE      = 5000;
+	const NODE_FRACS = [0.17, 0.50, 0.83];
+	const SHINE_DUR  = 480;
+
 	let recentJobs: StoredJob[] = $state([]);
+	let typedText    = $state('');
+	let showDetected = $state(false);
+	let visibleRows  = $state(0);
+	let shineIdx     = $state(-1);
+
+	let step0: HTMLElement | undefined;
+	let step1: HTMLElement | undefined;
+	let step2: HTMLElement | undefined;
+
+	const toolResults = [
+		{
+			tool: 'popmusic', accent: '#ec4899', title: 'PopMuSiC', subtitle: 'ΔΔG predictions',
+			rows: [
+				{ pos:  7, mut: 'Val → Ile', val: '−0.31', unit: 'kcal/mol', effect: 'stabilizing'   },
+				{ pos: 12, mut: 'Phe → Tyr', val: '−0.67', unit: 'kcal/mol', effect: 'stabilizing'   },
+				{ pos:  2, mut: 'Leu → Ala', val: '+1.84', unit: 'kcal/mol', effect: 'destabilizing' },
+				{ pos: 18, mut: 'Lys → Arg', val: '−0.12', unit: 'kcal/mol', effect: 'neutral'       },
+			]
+		},
+		{
+			tool: 'hotmusic', accent: '#f59e0b', title: 'HoTMuSiC', subtitle: 'ΔTm predictions',
+			rows: [
+				{ pos:  7, mut: 'Val → Ile', val: '+1.2', unit: 'K', effect: 'stabilizing'   },
+				{ pos: 12, mut: 'Phe → Tyr', val: '+2.1', unit: 'K', effect: 'stabilizing'   },
+				{ pos:  2, mut: 'Leu → Ala', val: '−3.4', unit: 'K', effect: 'destabilizing' },
+				{ pos: 18, mut: 'Lys → Arg', val: '+0.3', unit: 'K', effect: 'neutral'       },
+			]
+		},
+		{
+			tool: 'snpmusic', accent: '#10b981', title: 'SNPMuSiC', subtitle: 'ΔΔG for nsSNPs',
+			rows: [
+				{ pos:  7, mut: 'Val → Ile', val: '−0.28', unit: 'kcal/mol', effect: 'stabilizing'   },
+				{ pos: 12, mut: 'Phe → Tyr', val: '+0.91', unit: 'kcal/mol', effect: 'destabilizing' },
+				{ pos:  2, mut: 'Leu → Ala', val: '+1.54', unit: 'kcal/mol', effect: 'destabilizing' },
+				{ pos: 18, mut: 'Lys → Arg', val: '−0.08', unit: 'kcal/mol', effect: 'neutral'       },
+			]
+		}
+	];
+
+	let activeToolPill = $state(0);  // cycles through tool pills in step 1
+
+	let activePill   = $state(0);
+	let activeResult = $state(0);
+	let resultFading = $state(false);
+
+	function cycleTo(idx: number) {
+		if (idx === activePill) return;
+		activePill = idx;
+		resultFading = true;
+		setTimeout(() => {
+			activeResult = idx;
+			resultFading = false;
+		}, 260);
+	}
+
+	function cardOffset(i: number): number {
+		let o = i - activeResult;
+		if (o >  1) o -= toolList.length;
+		if (o < -1) o += toolList.length;
+		return o;
+	}
+
+	function animStep1() {
+		const id = '3BIO';
+		let i = 0;
+		const t = setInterval(() => {
+			typedText = id.slice(0, ++i);
+			if (i === id.length) { clearInterval(t); setTimeout(() => (showDetected = true), 500); }
+		}, 140);
+	}
+
+	function animStep2() {
+		let r = 0;
+		const t = setInterval(() => {
+			visibleRows = ++r;
+			if (r >= 2) clearInterval(t);
+		}, 180);
+	}
 
 	onMount(() => {
 		recentJobs = getRecentJobs();
+
+		// Single dot with JS-timed node shines
+		function scheduleShines() {
+			NODE_FRACS.forEach((frac, i) => {
+				setTimeout(() => {
+					shineIdx = i;
+					setTimeout(() => { if (shineIdx === i) shineIdx = -1; }, SHINE_DUR);
+				}, frac * CYCLE);
+			});
+		}
+		scheduleShines();
+		const shineTimer = setInterval(scheduleShines, CYCLE);
+
+		// Cycle tool pills in step 1
+		const toolPillTimer = setInterval(() => {
+			activeToolPill = (activeToolPill + 1) % toolList.length;
+		}, 1400);
+
+		// Auto-cycle results carousel
+		const resultTimer = setInterval(() => {
+			cycleTo((activePill + 1) % toolList.length);
+		}, 3500);
+
+		// IntersectionObserver for step reveal
+		const animFns = [() => {}, animStep1, animStep2];
+		const started  = [false, false, false];
+		const obs = new IntersectionObserver((entries) => {
+			entries.forEach((e) => {
+				if (!e.isIntersecting) return;
+				const idx = Number((e.target as HTMLElement).dataset.stepIdx);
+				if (!started[idx]) {
+					started[idx] = true;
+					e.target.classList.add('visible');
+					setTimeout(() => animFns[idx](), 350);
+				}
+			});
+		}, { threshold: 0.3 });
+		[step0, step1, step2].forEach((el) => { if (el) obs.observe(el); });
+
+		return () => {
+			clearInterval(shineTimer);
+			clearInterval(toolPillTimer);
+			clearInterval(resultTimer);
+			obs.disconnect();
+		};
 	});
-
-	const exampleRows = [
-		{ pos: 2,  wt: 'Leu', mut: 'Ala', ddg: +1.84, effect: 'destabilizing' },
-		{ pos: 7,  wt: 'Val', mut: 'Ile', ddg: -0.31, effect: 'stabilizing'   },
-		{ pos: 12, wt: 'Phe', mut: 'Tyr', ddg: -0.67, effect: 'stabilizing'   },
-		{ pos: 18, wt: 'Lys', mut: 'Arg', ddg: -0.12, effect: 'neutral'       },
-		{ pos: 23, wt: 'Gly', mut: 'Ala', ddg: +0.55, effect: 'destabilizing' },
-		{ pos: 31, wt: 'Trp', mut: 'Phe', ddg: +2.10, effect: 'destabilizing' },
-		{ pos: 34, wt: 'Ile', mut: 'Val', ddg: -0.44, effect: 'stabilizing'   },
-		{ pos: 41, wt: 'Asp', mut: 'Asn', ddg: +0.78, effect: 'destabilizing' },
-	];
-
-	const ghostRows = [
-		{ pos: 3,  wt: 'Ser', mut: 'Thr', ddg: -0.19 },
-		{ pos: 9,  wt: 'Arg', mut: 'Lys', ddg: +0.33 },
-		{ pos: 15, wt: 'Ala', mut: 'Gly', ddg: +1.02 },
-		{ pos: 27, wt: 'Pro', mut: 'Ala', ddg: +1.55 },
-		{ pos: 38, wt: 'Tyr', mut: 'His', ddg: -0.88 },
-		{ pos: 44, wt: 'Met', mut: 'Leu', ddg: -0.23 },
-	];
 </script>
 
-<!-- HERO -->
+<!-- ── HERO ─────────────────────────────────────────── -->
 <section class="hero">
-	<div class="glow" aria-hidden="true"></div>
-
+	<div class="hero-glow" aria-hidden="true"></div>
 	<div class="hero-inner">
-		<div class="hero-text">
-			<h1>Mutation stability,<br />quantified.</h1>
-			<p class="subtitle">
-				Submit a PDB structure, pick a tool, get quantitative predictions — ready to interpret.
-			</p>
-			<a href="{base}/run" class="cta">Run an analysis →</a>
+		<h1>Mutation stability,<br />quantified.</h1>
+		<p class="subtitle">
+			Submit a protein structure, pick a tool, get quantitative predictions.
+		</p>
+		<a href="{base}/run" class="cta">Run an analysis →</a>
+	</div>
+</section>
+
+<!-- ── PIPELINE ──────────────────────────────────────── -->
+<section class="pipeline-section">
+	<p class="pipeline-eyebrow">How it works</p>
+
+	<div class="pipeline-wrap">
+		<!-- Glowing fiber with a single flowing dot -->
+		<div class="fiber" aria-hidden="true">
+			<div class="fiber-dot"></div>
 		</div>
 
-		<div class="preview-wrap" aria-hidden="true">
-			<!-- ghost rows left -->
-			<div class="ghost ghost-left">
-				{#each ghostRows as row}
-					<div class="ghost-row">
-						<span class="ghost-pos">{row.pos}</span>
-						<span class="ghost-mut">{row.wt} → {row.mut}</span>
-						<span class="ghost-val" class:neg={row.ddg < 0}>{row.ddg > 0 ? '+' : ''}{row.ddg.toFixed(2)}</span>
-					</div>
-				{/each}
-			</div>
-
-			<!-- central card -->
-			<div class="preview-card">
-				<div class="card-header">
-					<div class="card-id">
-						<span class="pdb-badge">3BIO</span>
-						<span class="chain-badge">Chain A</span>
-					</div>
-					<span class="tool-badge" style="--c: #6366f1">PopMuSiC</span>
-				</div>
-
-				<div class="card-label">ΔΔG predictions · single-site mutations</div>
-
-				<table class="result-table">
-					<thead>
-						<tr>
-							<th>Pos.</th>
-							<th>Mutation</th>
-							<th>ΔΔG (kcal/mol)</th>
-							<th>Effect</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each exampleRows as row}
-							<tr>
-								<td class="mono">{row.pos}</td>
-								<td class="mono">{row.wt} → {row.mut}</td>
-								<td class="mono ddg" class:pos={row.ddg > 0.3} class:neg={row.ddg < -0.1}>
-									{row.ddg > 0 ? '+' : ''}{row.ddg.toFixed(2)}
-								</td>
-								<td>
-									<span class="tag {row.effect}">{row.effect}</span>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-
-				<div class="card-footer">
-					<span class="example-note">Example output — 3BIO, 8 of 2,847 mutations shown</span>
+		<!-- Step 1: Tool — LEFT -->
+		<div class="p-step" data-step-idx="0" bind:this={step0}>
+			<div class="p-body p-body--left">
+				<span class="p-num">01</span>
+				<h3 class="p-title">Tool</h3>
+				<p class="p-desc">Choose a prediction model for your analysis.</p>
+				<div class="p-ui p-ui--pills">
+					{#each toolList as t, i}
+						<a
+							href="{base}/run?tool={t.id}"
+							class="tool-pill"
+							class:active={activeToolPill === i}
+							style="--c:{t.accent}"
+						>{t.name}</a>
+					{/each}
 				</div>
 			</div>
+			<div class="p-node" class:shine={shineIdx === 0} aria-hidden="true"></div>
+			<div class="p-spacer"></div>
+		</div>
 
-			<!-- ghost rows right -->
-			<div class="ghost ghost-right">
-				{#each ghostRows.slice().reverse() as row}
-					<div class="ghost-row">
-						<span class="ghost-pos">{row.pos}</span>
-						<span class="ghost-mut">{row.wt} → {row.mut}</span>
-						<span class="ghost-val" class:neg={row.ddg < 0}>{row.ddg > 0 ? '+' : ''}{row.ddg.toFixed(2)}</span>
+		<!-- Step 2: Structure — RIGHT -->
+		<div class="p-step" data-step-idx="1" bind:this={step1}>
+			<div class="p-spacer"></div>
+			<div class="p-node" class:shine={shineIdx === 1} aria-hidden="true"></div>
+			<div class="p-body p-body--right">
+				<span class="p-num">02</span>
+				<h3 class="p-title">Structure</h3>
+				<p class="p-desc">Submit any PDB ID or upload a structure file.</p>
+				<div class="p-ui">
+					<div class="fake-input">
+						<span class="prompt">$</span>
+						<span class="typed">{typedText}</span>
+						{#if !showDetected}<span class="cursor">▌</span>{/if}
 					</div>
-				{/each}
+					{#if showDetected}
+						<p class="detected">✓ PDB ID detected — 3BIO</p>
+					{/if}
+				</div>
 			</div>
+		</div>
+
+		<!-- Step 3: Results — LEFT -->
+		<div class="p-step" data-step-idx="2" bind:this={step2}>
+			<div class="p-body p-body--left p-body--results">
+				<span class="p-num">03</span>
+				<h3 class="p-title">Results</h3>
+				<p class="p-desc">Explore predictions across every mutation site.</p>
+
+				<!-- Tool tabs -->
+				<div class="result-tabs">
+					{#each toolResults as tr, i}
+						<button
+							class="result-tab"
+							class:active={activePill === i}
+							style="--c:{tr.accent}"
+							onclick={() => cycleTo(i)}
+							type="button"
+						>{tr.title}</button>
+					{/each}
+				</div>
+
+				<!-- Carousel with ghost panels -->
+				<div class="result-carousel" class:fading={resultFading}>
+					{#each toolResults as tr, i}
+						{@const off = cardOffset(i)}
+						<div
+							class="result-card"
+							class:card-center={off === 0}
+							class:card-prev={off === -1}
+							class:card-next={off === 1}
+							style="--c:{tr.accent}"
+						>
+							<div class="rc-header">
+								<span class="rc-name" style="color:{tr.accent}">{tr.title}</span>
+								<span class="rc-sub">{tr.subtitle}</span>
+							</div>
+							<table class="mini-table">
+								{#each tr.rows.slice(0, visibleRows) as row}
+									<tr>
+										<td class="mono muted">{row.pos}</td>
+										<td class="mono">{row.mut}</td>
+										<td
+											class="mono fw"
+											class:green={row.effect === 'stabilizing'}
+											class:red={row.effect === 'destabilizing'}
+										>{row.val}</td>
+										<td class="mono small muted">{row.unit}</td>
+										<td><span class="tag {row.effect}">{row.effect}</span></td>
+									</tr>
+								{/each}
+							</table>
+						</div>
+					{/each}
+				</div>
+			</div>
+			<div class="p-node" class:shine={shineIdx === 2} aria-hidden="true"></div>
+			<div class="p-spacer"></div>
 		</div>
 	</div>
 </section>
 
-<!-- TOOLS -->
+<!-- ── TOOLS ─────────────────────────────────────────── -->
 <section class="tools-section">
 	<div class="section-inner">
 		<h2 class="section-title">Available tools</h2>
@@ -121,10 +271,10 @@
 			{#each toolList as tool}
 				<li>
 					<a href="{base}/run?tool={tool.id}" class="tool-item">
-						<div class="tool-accent-bar" style="background: {tool.accent}"></div>
+						<div class="tool-accent-bar" style="background:{tool.accent}"></div>
 						<div class="tool-body">
 							<div class="tool-top">
-								<span class="tool-name" style="color: {tool.accent}">{tool.name}</span>
+								<span class="tool-name" style="color:{tool.accent}">{tool.name}</span>
 								{#if tool.tags}
 									<div class="tool-tags">
 										{#each tool.tags.slice(0, 2) as tag}
@@ -143,7 +293,7 @@
 	</div>
 </section>
 
-<!-- RECENT JOBS -->
+<!-- ── RECENT JOBS ───────────────────────────────────── -->
 {#if recentJobs.length > 0}
 	<section class="recent-section">
 		<div class="section-inner">
@@ -161,47 +311,44 @@
 {/if}
 
 <style>
-	/* ── HERO ─────────────────────────────────────────────────────────────── */
+	/* ── HERO ────────────────────────────────────────── */
 	.hero {
 		position: relative;
+		padding: 7rem 2rem 5rem;
+		text-align: center;
 		overflow: hidden;
-		padding: 5rem 1.5rem 4rem;
-		min-height: 80vh;
-		display: flex;
-		align-items: center;
-		justify-content: center;
 	}
 
-	.glow {
+	.hero-glow {
 		position: absolute;
 		inset: 0;
-		background: radial-gradient(ellipse 60% 50% at 50% 10%, color-mix(in srgb, #6366f1 18%, transparent), transparent 70%);
+		background: radial-gradient(
+			ellipse 70% 55% at 50% 0%,
+			color-mix(in srgb, #6366f1 14%, transparent),
+			transparent 70%
+		);
 		pointer-events: none;
+		animation: glow-pulse 5s ease-in-out infinite;
+	}
+
+	@keyframes glow-pulse {
+		0%, 100% { opacity: 0.7; }
+		50%       { opacity: 1; }
 	}
 
 	.hero-inner {
 		position: relative;
 		z-index: 1;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 3rem;
-		width: 100%;
-		max-width: 1100px;
+		max-width: 560px;
 		margin: 0 auto;
-	}
-
-	/* headline + CTA */
-	.hero-text {
-		text-align: center;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 1rem;
+		gap: 1.25rem;
 	}
 
 	h1 {
-		font-size: clamp(2.25rem, 5vw, 3.75rem);
+		font-size: clamp(2.5rem, 5.5vw, 4.25rem);
 		font-weight: 800;
 		letter-spacing: -0.04em;
 		line-height: 1.1;
@@ -209,9 +356,9 @@
 	}
 
 	.subtitle {
-		font-size: 1.1rem;
+		font-size: 1.05rem;
 		color: var(--text-muted);
-		max-width: 480px;
+		max-width: 420px;
 		line-height: 1.6;
 	}
 
@@ -225,7 +372,6 @@
 		border-radius: 0.625rem;
 		text-decoration: none;
 		transition: opacity 0.15s, transform 0.15s;
-		margin-top: 0.25rem;
 	}
 
 	.cta:hover {
@@ -233,174 +379,394 @@
 		transform: translateY(-1px);
 	}
 
-	/* preview layout */
-	.preview-wrap {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0;
-		width: 100%;
+	/* ── PIPELINE ────────────────────────────────────── */
+	.pipeline-section {
+		padding: 5rem 2rem 5rem;
+		border-top: 1px solid var(--border);
 	}
 
-	/* central card */
-	.preview-card {
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: 1.25rem;
-		padding: 1.5rem;
-		width: min(520px, 100%);
-		flex-shrink: 0;
-		box-shadow: 0 0 0 1px color-mix(in srgb, #6366f1 20%, transparent),
-		            0 24px 64px rgba(0, 0, 0, 0.4);
-	}
-
-	.card-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 0.75rem;
-	}
-
-	.card-id {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-	}
-
-	.pdb-badge {
-		font-family: monospace;
-		font-size: 0.9rem;
+	.pipeline-eyebrow {
+		text-align: center;
+		font-size: 0.72rem;
 		font-weight: 700;
-		color: var(--text);
-		background: color-mix(in srgb, var(--text) 8%, transparent);
-		border: 1px solid var(--border);
-		border-radius: 0.375rem;
-		padding: 0.2rem 0.55rem;
-	}
-
-	.chain-badge {
-		font-size: 0.8rem;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
 		color: var(--text-muted);
-		background: color-mix(in srgb, var(--text-muted) 8%, transparent);
-		border: 1px solid var(--border);
-		border-radius: 0.375rem;
-		padding: 0.2rem 0.55rem;
+		margin-bottom: 4rem;
 	}
 
-	.tool-badge {
-		font-size: 0.8rem;
+	.pipeline-wrap {
+		position: relative;
+		max-width: 820px;
+		margin: 0 auto;
+	}
+
+	/* Fiber line */
+	.fiber {
+		position: absolute;
+		left: 50%;
+		top: 0;
+		bottom: 0;
+		width: 2px;
+		transform: translateX(-50%);
+		background: linear-gradient(
+			to bottom,
+			transparent 0%,
+			color-mix(in srgb, #6366f1 55%, transparent) 6%,
+			color-mix(in srgb, #6366f1 55%, transparent) 94%,
+			transparent 100%
+		);
+		box-shadow: 0 0 16px color-mix(in srgb, #6366f1 15%, transparent);
+		pointer-events: none;
+	}
+
+	/* Single dot traveling down */
+	.fiber-dot {
+		position: absolute;
+		top: 0;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		background: #a5b4fc;
+		box-shadow: 0 0 8px #6366f1, 0 0 18px rgba(99, 102, 241, 0.5);
+		animation: dot-travel 5s linear infinite;
+	}
+
+	@keyframes dot-travel {
+		0%   { top: 0%;   opacity: 0; }
+		4%   { opacity: 1; }
+		96%  { opacity: 1; }
+		100% { top: 100%; opacity: 0; }
+	}
+
+	/* Step rows — 3-col grid: content | node | content */
+	.p-step {
+		display: grid;
+		grid-template-columns: 1fr 14px 1fr;
+		align-items: center;
+		min-height: 280px;
+		opacity: 0;
+		transform: translateY(24px);
+		transition: opacity 0.7s ease, transform 0.7s ease;
+	}
+
+	.p-step.visible {
+		opacity: 1;
+		transform: none;
+	}
+
+	/* Results step: taller to fit carousel */
+	.p-body--results {
+		min-height: 300px;
+	}
+
+	.p-body--left {
+		padding-right: 3.5rem;
+		text-align: right;
+	}
+
+	.p-body--left .p-ui {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 0.5rem;
+	}
+
+	.p-body--right {
+		padding-left: 3.5rem;
+	}
+
+	.p-body--right .p-ui {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+
+	/* Node dot */
+	.p-node {
+		width: 14px;
+		height: 14px;
+		border-radius: 50%;
+		background: #6366f1;
+		justify-self: center;
+		position: relative;
+		z-index: 1;
+		box-shadow:
+			0 0 0 4px color-mix(in srgb, #6366f1 15%, transparent),
+			0 0 20px color-mix(in srgb, #6366f1 55%, transparent);
+		transition: box-shadow 0.1s ease;
+	}
+
+	/* Node shine burst when dot crosses */
+	.p-node.shine {
+		animation: node-shine 0.48s ease-out;
+	}
+
+	@keyframes node-shine {
+		0%   {
+			box-shadow:
+				0 0 0 4px  color-mix(in srgb, #6366f1 15%, transparent),
+				0 0 20px   color-mix(in srgb, #6366f1 55%, transparent);
+			transform: scale(1);
+		}
+		35%  {
+			box-shadow:
+				0 0 0 10px color-mix(in srgb, #6366f1 25%, transparent),
+				0 0 48px   color-mix(in srgb, #6366f1 90%, transparent),
+				0 0 90px   color-mix(in srgb, #818cf8 50%, transparent);
+			transform: scale(1.45);
+		}
+		100% {
+			box-shadow:
+				0 0 0 4px  color-mix(in srgb, #6366f1 15%, transparent),
+				0 0 20px   color-mix(in srgb, #6366f1 55%, transparent);
+			transform: scale(1);
+		}
+	}
+
+	/* Step typography */
+	.p-num {
+		display: block;
+		font-size: 0.7rem;
 		font-weight: 700;
+		letter-spacing: 0.12em;
+		color: #6366f1;
+		font-family: monospace;
+		margin-bottom: 0.3rem;
+	}
+
+	.p-title {
+		font-size: 1.6rem;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		color: var(--text);
+		margin: 0 0 0.35rem;
+	}
+
+	.p-desc {
+		font-size: 0.85rem;
+		color: var(--text-muted);
+		line-height: 1.55;
+		margin: 0 0 0.85rem;
+	}
+
+	/* Pills row layout for step 1 */
+	.p-ui--pills {
+		flex-direction: row !important;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+		align-items: center;
+		gap: 0.5rem !important;
+	}
+
+	/* Tool pills — real links */
+	.tool-pill {
+		display: inline-block;
+		padding: 0.4rem 1.1rem;
+		border-radius: 999px;
+		border: 1px solid color-mix(in srgb, var(--c) 25%, transparent);
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: var(--text-muted);
+		background: transparent;
+		text-decoration: none;
+		transition: color 0.25s, background 0.25s, border-color 0.25s, box-shadow 0.25s, transform 0.15s;
+	}
+
+	.tool-pill:hover {
+		color: var(--c);
+		background: color-mix(in srgb, var(--c) 10%, transparent);
+		border-color: color-mix(in srgb, var(--c) 40%, transparent);
+		transform: translateY(-1px);
+	}
+
+	.tool-pill.active {
 		color: var(--c);
 		background: color-mix(in srgb, var(--c) 12%, transparent);
-		border: 1px solid color-mix(in srgb, var(--c) 30%, transparent);
-		border-radius: 0.375rem;
-		padding: 0.2rem 0.55rem;
+		border-color: color-mix(in srgb, var(--c) 45%, transparent);
+		box-shadow: 0 0 18px color-mix(in srgb, var(--c) 30%, transparent);
 	}
 
-	.card-label {
-		font-size: 0.75rem;
-		color: var(--text-muted);
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		margin-bottom: 0.875rem;
-	}
-
-	.result-table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 0.82rem;
-	}
-
-	.result-table th {
-		text-align: left;
-		color: var(--text-muted);
-		font-weight: 600;
-		font-size: 0.72rem;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		padding: 0 0.5rem 0.5rem;
-		border-bottom: 1px solid var(--border);
-	}
-
-	.result-table td {
-		padding: 0.45rem 0.5rem;
-		border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+	/* Step 2 — fake terminal */
+	.fake-input {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 0.5rem;
+		padding: 0.5rem 0.9rem;
+		font-family: monospace;
+		font-size: 0.9rem;
 		color: var(--text);
 	}
 
-	.result-table tr:last-child td {
-		border-bottom: none;
+	.prompt { color: #6366f1; font-weight: 700; }
+
+	.cursor {
+		color: #6366f1;
+		animation: blink 1s step-end infinite;
 	}
 
-	.mono {
+	@keyframes blink { 50% { opacity: 0; } }
+
+	.detected {
+		font-size: 0.8rem;
+		color: #34d399;
 		font-family: monospace;
+		animation: fade-up 0.4s ease;
 	}
 
-	.ddg { font-weight: 600; }
-	.ddg.pos { color: #f87171; }
-	.ddg.neg { color: #34d399; }
+	@keyframes fade-up {
+		from { opacity: 0; transform: translateY(4px); }
+		to   { opacity: 1; transform: none; }
+	}
+
+	/* ── RESULTS CAROUSEL ────────────────────────────── */
+	.result-tabs {
+		display: flex;
+		gap: 0.375rem;
+		margin-bottom: 1.25rem;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 0.75rem;
+		padding: 0.25rem;
+	}
+
+	.result-tab {
+		background: none;
+		border: none;
+		border-radius: 0.5rem;
+		padding: 0.45rem 1.1rem;
+		font-size: 0.82rem;
+		font-weight: 600;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: color 0.18s, background 0.18s;
+	}
+
+	.result-tab.active {
+		background: var(--bg);
+		color: var(--c);
+	}
+
+	.result-carousel {
+		position: relative;
+		width: 100%;
+		height: 190px;
+		overflow: hidden;
+		transition: opacity 0.26s ease;
+	}
+
+	.result-carousel.fading {
+		opacity: 0.12;
+	}
+
+	.result-card {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		translate: 0 -50%;
+		width: 320px;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 0.875rem;
+		padding: 1rem 1.25rem;
+		transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+		            opacity 0.45s ease,
+		            filter 0.45s ease,
+		            border-color 0.45s ease;
+		pointer-events: none;
+		user-select: none;
+	}
+
+	/* Center (active) card */
+	.card-center {
+		transform: translateX(-50%);
+		opacity: 1;
+		z-index: 2;
+		pointer-events: auto;
+		border-color: color-mix(in srgb, var(--c) 35%, var(--border));
+		box-shadow: 0 0 24px color-mix(in srgb, var(--c) 14%, transparent);
+	}
+
+	/* Ghost cards — peek from sides */
+	.card-prev {
+		transform: translateX(calc(-50% - 360px)) scale(0.9);
+		opacity: 0.25;
+		z-index: 1;
+		filter: blur(1.5px);
+	}
+
+	.card-next {
+		transform: translateX(calc(-50% + 360px)) scale(0.9);
+		opacity: 0.25;
+		z-index: 1;
+		filter: blur(1.5px);
+	}
+
+	.rc-header {
+		display: flex;
+		align-items: baseline;
+		gap: 0.6rem;
+		margin-bottom: 0.85rem;
+	}
+
+	.rc-name {
+		font-size: 0.95rem;
+		font-weight: 700;
+	}
+
+	.rc-sub {
+		font-size: 0.75rem;
+		color: var(--text-muted);
+	}
+
+	/* Mini results table */
+	.mini-table {
+		border-collapse: collapse;
+		font-size: 0.82rem;
+		width: 100%;
+	}
+
+	.mini-table tr { animation: row-appear 0.28s ease both; }
+
+	@keyframes row-appear {
+		from { opacity: 0; transform: translateY(5px); }
+		to   { opacity: 1; transform: none; }
+	}
+
+	.mini-table td {
+		padding: 0.28rem 0.55rem 0.28rem 0;
+		border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+		color: var(--text);
+		text-align: left;
+	}
+
+	.mini-table tr:last-child td { border-bottom: none; }
+
+	.mono  { font-family: monospace; }
+	.muted { color: var(--text-muted); }
+	.fw    { font-weight: 600; }
+	.small { font-size: 0.75rem; }
+	.green { color: #34d399; }
+	.red   { color: #f87171; }
 
 	.tag {
-		font-size: 0.72rem;
+		font-size: 0.68rem;
 		font-weight: 600;
 		border-radius: 0.25rem;
-		padding: 0.15rem 0.45rem;
+		padding: 0.1rem 0.4rem;
+		white-space: nowrap;
 	}
-
 	.tag.destabilizing { background: color-mix(in srgb, #f87171 12%, transparent); color: #f87171; }
 	.tag.stabilizing   { background: color-mix(in srgb, #34d399 12%, transparent); color: #34d399; }
 	.tag.neutral       { background: color-mix(in srgb, #94a3b8 12%, transparent); color: #94a3b8; }
 
-	.card-footer {
-		margin-top: 1rem;
-		padding-top: 0.75rem;
-		border-top: 1px solid var(--border);
-	}
-
-	.example-note {
-		font-size: 0.72rem;
-		color: var(--text-muted);
-	}
-
-	/* ghost columns */
-	.ghost {
-		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
-		flex: 1;
-		max-width: 220px;
-		padding: 0 1.25rem;
-	}
-
-	.ghost-left { align-items: flex-end; }
-	.ghost-right { align-items: flex-start; }
-
-	.ghost-row {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: 0.5rem;
-		padding: 0.35rem 0.6rem;
-		font-size: 0.78rem;
-		opacity: 0.35;
-		white-space: nowrap;
-	}
-
-	.ghost-left .ghost-row:nth-child(odd)  { opacity: 0.20; }
-	.ghost-right .ghost-row:nth-child(even) { opacity: 0.20; }
-
-	.ghost-pos  { font-family: monospace; color: var(--text-muted); min-width: 1.5rem; }
-	.ghost-mut  { font-family: monospace; color: var(--text); }
-	.ghost-val  { font-family: monospace; font-weight: 600; color: #f87171; margin-left: auto; }
-	.ghost-val.neg { color: #34d399; }
-
-	@media (max-width: 700px) {
-		.ghost { display: none; }
-	}
-
-	/* ── TOOLS ────────────────────────────────────────────────────────────── */
+	/* ── TOOLS ───────────────────────────────────────── */
 	.tools-section,
 	.recent-section {
 		padding: 3rem 1.5rem;
@@ -468,15 +834,8 @@
 		flex-wrap: wrap;
 	}
 
-	.tool-name {
-		font-size: 1rem;
-		font-weight: 700;
-	}
-
-	.tool-tags {
-		display: flex;
-		gap: 0.4rem;
-	}
+	.tool-name  { font-size: 1rem; font-weight: 700; }
+	.tool-tags  { display: flex; gap: 0.4rem; }
 
 	.tool-tag {
 		font-size: 0.7rem;
@@ -501,7 +860,7 @@
 		padding-right: 0.25rem;
 	}
 
-	/* ── RECENT ───────────────────────────────────────────────────────────── */
+	/* ── RECENT ──────────────────────────────────────── */
 	.recent-list {
 		list-style: none;
 		padding: 0;
@@ -521,18 +880,43 @@
 		font-size: 0.875rem;
 	}
 
-	.recent-id {
-		font-family: monospace;
-		color: var(--text-muted);
-	}
+	.recent-id   { font-family: monospace; color: var(--text-muted); }
+	.recent-link { color: var(--text); text-decoration: none; font-weight: 600; }
+	.recent-link:hover { text-decoration: underline; }
 
-	.recent-link {
-		color: var(--text);
-		text-decoration: none;
-		font-weight: 600;
-	}
+	/* ── MOBILE ──────────────────────────────────────── */
+	@media (max-width: 640px) {
+		.pipeline-wrap { padding: 0 1rem; }
 
-	.recent-link:hover {
-		text-decoration: underline;
+		.fiber, .p-node, .p-spacer { display: none; }
+
+		.p-step {
+			grid-template-columns: 1fr;
+			min-height: auto;
+			padding: 2.5rem 0;
+			border-bottom: 1px solid var(--border);
+		}
+
+		.p-step:last-child { border-bottom: none; }
+
+		.p-body--left,
+		.p-body--right {
+			text-align: left;
+			padding: 0;
+		}
+
+		.p-body--left .p-ui,
+		.p-body--right .p-ui {
+			align-items: flex-start;
+		}
+
+		.p-ui--pills {
+			justify-content: flex-start;
+		}
+
+		.result-carousel { height: 240px; }
+		.result-card { width: 260px; }
+		.card-prev { transform: translateX(calc(-50% - 290px)) scale(0.9); }
+		.card-next { transform: translateX(calc(-50% + 290px)) scale(0.9); }
 	}
 </style>

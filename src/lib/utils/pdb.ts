@@ -6,6 +6,25 @@ export interface PdbMetadata {
 	chains: string[];
 	resolution?: string;
 	organism?: string;
+	experimentType?: string;
+	rFactor?: number;
+	residueCount?: number;
+	ligandCount?: number;
+}
+
+function fmtExperimentType(method?: string): string | undefined {
+	if (!method) return undefined;
+	const map: Record<string, string> = {
+		'X-RAY DIFFRACTION':        'X-ray',
+		'SOLUTION NMR':             'NMR',
+		'SOLID-STATE NMR':          'Solid NMR',
+		'ELECTRON MICROSCOPY':      'Cryo-EM',
+		'ELECTRON CRYSTALLOGRAPHY': 'Electron crystallography',
+		'NEUTRON DIFFRACTION':      'Neutron diffraction',
+		'FIBER DIFFRACTION':        'Fiber diffraction',
+		'POWDER DIFFRACTION':       'Powder diffraction',
+	};
+	return map[method.toUpperCase()] ?? method;
 }
 
 export function detectInputType(value: string): InputType {
@@ -35,12 +54,19 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 			e?.rcsb_polymer_entity_container_identifiers?.auth_asym_ids ?? []
 		);
 
+		const nonPolymerCount: number = data.rcsb_entry_info?.non_polymer_entity_count ?? 0;
+		const solventCount: number    = data.rcsb_entry_info?.solvent_entity_count ?? 0;
+
 		return {
 			id,
 			name: data.struct?.title ?? id,
 			chains: [...new Set(chains)].sort(),
 			resolution: data.refine?.[0]?.ls_d_res_high?.toString(),
-			organism: data.rcsb_entry_info?.source_organism_scientific_name
+			organism: data.rcsb_entry_info?.source_organism_scientific_name,
+			experimentType: fmtExperimentType(data.exptl?.[0]?.method),
+			rFactor:      data.refine?.[0]?.ls_R_factor_R_work ?? data.refine?.[0]?.ls_R_factor_obs,
+			residueCount: data.rcsb_entry_info?.deposited_polymer_monomer_count,
+			ligandCount:  Math.max(0, nonPolymerCount - solventCount),
 		};
 	}
 
@@ -51,7 +77,7 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 			name: `AlphaFold model for ${id}`,
 			chains: ['A'],
 			organism: undefined,
-			resolution: 'AlphaFold'
+			experimentType: 'Predicted',
 		};
 	}
 
@@ -60,6 +86,7 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 
 export function parsePdbFile(content: string): PdbMetadata {
 	const lines = content.split('\n');
+
 	const chains = [...new Set(
 		lines
 			.filter((l) => l.startsWith('ATOM') || l.startsWith('HETATM'))
@@ -70,5 +97,36 @@ export function parsePdbFile(content: string): PdbMetadata {
 	const titleLine = lines.find((l) => l.startsWith('TITLE'));
 	const name = titleLine ? titleLine.slice(10).trim() : 'Uploaded structure';
 
-	return { id: 'custom', name, chains };
+	// R-factor from REMARK 3
+	let rFactor: number | undefined;
+	for (const l of lines) {
+		const m = l.match(/^REMARK\s+3\s+R VALUE\s+\(WORKING SET\)\s*:\s*([0-9.]+)/);
+		if (m) { rFactor = parseFloat(m[1]); break; }
+	}
+
+	// Count unique residues from ATOM records
+	const residueKeys = new Set<string>();
+	for (const l of lines) {
+		if (!l.startsWith('ATOM')) continue;
+		residueKeys.add(`${l[21]}${l.slice(22, 26).trim()}`);
+	}
+
+	// Count unique ligand instances from HETATM, excluding water
+	const WATER = new Set(['HOH', 'WAT', 'H2O', 'DOD']);
+	const ligandKeys = new Set<string>();
+	for (const l of lines) {
+		if (!l.startsWith('HETATM')) continue;
+		const resName = l.slice(17, 20).trim();
+		if (WATER.has(resName)) continue;
+		ligandKeys.add(`${l[21]}${l.slice(22, 26).trim()}`);
+	}
+
+	return {
+		id: 'custom',
+		name,
+		chains,
+		rFactor,
+		residueCount: residueKeys.size || undefined,
+		ligandCount:  ligandKeys.size || undefined,
+	};
 }
