@@ -239,6 +239,7 @@
 								<span class="rc-sub">{tr.subtitle}</span>
 							</div>
 							<table class="mini-table">
+								<tbody>
 								{#each tr.rows.slice(0, visibleRows) as row}
 									<tr>
 										<td class="mono muted">{row.pos}</td>
@@ -252,6 +253,7 @@
 										<td><span class="tag {row.effect}">{row.effect}</span></td>
 									</tr>
 								{/each}
+								</tbody>
 							</table>
 						</div>
 					{/each}

@@ -27,6 +27,7 @@ export interface ToolConfig {
 	accent: string;
 	chainRule: ChainRule;
 	fields: ToolField[];
+	mutationList?: boolean;  // supports custom mutation selection (vs systematic all)
 	description?: string;
 	tags?: string[];
 	doi?: string;

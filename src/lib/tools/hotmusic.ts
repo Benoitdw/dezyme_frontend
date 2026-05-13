@@ -9,6 +9,7 @@ export const hotmusic: ToolConfig = {
 		preselect: (chains) => chains.slice(0, 1),
 		multiple: false
 	},
+	mutationList: true,
 	fields: [
 		{
 			name: 'tm_wt',

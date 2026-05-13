@@ -10,6 +10,21 @@ export interface PdbMetadata {
 	rFactor?: number;
 	residueCount?: number;
 	ligandCount?: number;
+	residues?: Record<string, string>;  // "A2" → "ALA" (chain+resNum → 3-letter AA)
+}
+
+function parseResidueMap(atomLines: Iterable<string>): Record<string, string> {
+	const map: Record<string, string> = {};
+	for (const l of atomLines) {
+		if (!l.startsWith('ATOM')) continue;
+		const chain   = l[21]?.trim();
+		const resNum  = l.slice(22, 26).trim();
+		const resName = l.slice(17, 20).trim();
+		if (!chain || !resNum || !resName) continue;
+		const key = `${chain}${resNum}`;
+		if (!map[key]) map[key] = resName;
+	}
+	return map;
 }
 
 function fmtExperimentType(method?: string): string | undefined {
@@ -57,6 +72,16 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 		const nonPolymerCount: number = data.rcsb_entry_info?.non_polymer_entity_count ?? 0;
 		const solventCount: number    = data.rcsb_entry_info?.solvent_entity_count ?? 0;
 
+		// Fetch coordinate file in parallel to build residue map for autocomplete
+		let residues: Record<string, string> | undefined;
+		try {
+			const pdbFile = await fetch(`https://files.rcsb.org/download/${id}.pdb`);
+			if (pdbFile.ok) {
+				const text = await pdbFile.text();
+				residues = parseResidueMap(text.split('\n'));
+			}
+		} catch { /* non-blocking — residue autocomplete just won't work */ }
+
 		return {
 			id,
 			name: data.struct?.title ?? id,
@@ -67,6 +92,7 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 			rFactor:      data.refine?.[0]?.ls_R_factor_R_work ?? data.refine?.[0]?.ls_R_factor_obs,
 			residueCount: data.rcsb_entry_info?.deposited_polymer_monomer_count,
 			ligandCount:  Math.max(0, nonPolymerCount - solventCount),
+			residues,
 		};
 	}
 
@@ -128,5 +154,6 @@ export function parsePdbFile(content: string): PdbMetadata {
 		rFactor,
 		residueCount: residueKeys.size || undefined,
 		ligandCount:  ligandKeys.size || undefined,
+		residues: parseResidueMap(lines),
 	};
 }

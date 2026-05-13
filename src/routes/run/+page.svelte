@@ -11,6 +11,7 @@
 	import { addJob } from '$lib/utils/storage';
 	import type { PdbMetadata as PdbMeta } from '$lib/utils/pdb';
 	import SoftIdCard from '$lib/components/SoftIdCard.svelte';
+	import MutationList from '$lib/components/MutationList.svelte';
 
 	let selectedTool = $state<ToolId>(($page.url.searchParams.get('tool') as ToolId) ?? 'popmusic');
 	let pdbMeta = $state<PdbMeta | null>(null);
@@ -20,6 +21,7 @@
 	let transitioning = $state(false);
 	let fieldValues = $state<Record<string, string>>({});
 	let fieldErrors = $state<Record<string, string>>({});
+	let mutations = $state<string[] | null>(null);  // null = systematic
 
 	function validateField(name: string, raw: string) {
 		const field = tool.fields.find((f) => f.name === name);
@@ -83,7 +85,7 @@
 				tool: selectedTool,
 				structureId: pdbMeta.id,
 				chains: selectedChains,
-				params: fieldValues
+				params: { ...fieldValues, ...(mutations !== null ? { mutations: mutations.join(',') } : {}) }
 			});
 			addJob({ id, tool: selectedTool, structureId: pdbMeta.id });
 			goto(`${base}/results/${id}`);
@@ -178,6 +180,16 @@
 						</div>
 					{/each}
 				</div>
+			</section>
+		{/if}
+
+		{#if tool.mutationList && pdbMeta}
+			<section class="section">
+				<span class="section-label">Mutations</span>
+				<MutationList
+					residues={pdbMeta.residues}
+					onchange={(m) => (mutations = m)}
+				/>
 			</section>
 		{/if}
 

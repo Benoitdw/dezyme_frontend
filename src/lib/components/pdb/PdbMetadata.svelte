@@ -12,9 +12,9 @@
 
 	let { meta, selectedChains = [], accent = '#6366f1' }: Props = $props();
 
-	let viewerEl: HTMLAnchorElement | undefined;
+	let viewerEl = $state<HTMLAnchorElement | undefined>();
 	let viewer = $state<any>(null);
-	const isPdbId = /^[A-Z0-9]{4}$/.test(meta.id);
+	const isPdbId = $derived(/^[A-Z0-9]{4}$/.test(meta.id));
 	const viewerId = `lp-${Math.random().toString(36).slice(2)}`;
 
 	const DIMMED_COLOR = [140, 140, 150];
