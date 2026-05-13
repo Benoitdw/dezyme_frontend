@@ -1,0 +1,5 @@
+services:
+  dezyme:
+    build: .
+    ports:
+      - "8080:80"

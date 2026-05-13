@@ -1,0 +1,199 @@
+<script lang="ts">
+	import { page } from '$app/stores';
+	import { onMount, onDestroy } from 'svelte';
+	import { tools } from '$lib/tools';
+	import { getJobStatus } from '$lib/utils/api';
+	import { parseToolFromId } from '$lib/utils/storage';
+	import type { JobStatus } from '$lib/utils/api';
+
+	const analysisId = $page.params.id;
+	const toolId = parseToolFromId(analysisId);
+	const tool = toolId ? tools[toolId] : null;
+
+	let status = $state<JobStatus>('pending');
+	let error = $state<string | null>(null);
+	let interval: ReturnType<typeof setInterval> | null = null;
+
+	async function poll() {
+		try {
+			const res = await getJobStatus(analysisId);
+			status = res.status;
+			if (status === 'done' || status === 'error') {
+				if (interval) clearInterval(interval);
+			}
+			if (res.error) error = res.error;
+		} catch {
+			// keep polling
+		}
+	}
+
+	onMount(() => {
+		poll();
+		interval = setInterval(poll, 3000);
+	});
+
+	onDestroy(() => {
+		if (interval) clearInterval(interval);
+	});
+
+	function copyId() {
+		navigator.clipboard.writeText(analysisId);
+	}
+</script>
+
+<div class="page">
+	<div class="header">
+		<div class="title-row">
+			{#if tool}
+				<span class="tool-badge" style="--accent: {tool.accent}">{tool.name}</span>
+			{/if}
+			<span class="analysis-id">{analysisId}</span>
+		</div>
+		<div class="actions">
+			<button class="action-btn" onclick={copyId} type="button">Copy ID</button>
+			<a href="/run{tool ? `?tool=${tool.id}` : ''}" class="action-btn">New analysis</a>
+		</div>
+	</div>
+
+	{#if status === 'done'}
+		<div class="results-area">
+			<p class="placeholder">Results viewer for <strong>{tool?.name ?? analysisId}</strong> coming soon.</p>
+		</div>
+	{:else if status === 'error'}
+		<div class="status-block error">
+			<span class="status-icon">✗</span>
+			<div>
+				<div class="status-text">Analysis failed</div>
+				{#if error}<div class="status-sub">{error}</div>{/if}
+			</div>
+		</div>
+	{:else}
+		<div class="status-block">
+			<span class="spinner" aria-hidden="true"></span>
+			<div>
+				<div class="status-text">{status === 'running' ? 'Running...' : 'Pending...'}</div>
+				<div class="status-sub">This page will update automatically</div>
+			</div>
+		</div>
+	{/if}
+</div>
+
+<style>
+	.page {
+		max-width: 900px;
+		margin: 0 auto;
+		padding: 2.5rem 2rem;
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+	}
+
+	.header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: 1rem;
+	}
+
+	.title-row {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.tool-badge {
+		font-size: 0.8rem;
+		font-weight: 700;
+		color: var(--accent);
+		background: color-mix(in srgb, var(--accent) 12%, transparent);
+		border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+		border-radius: 0.375rem;
+		padding: 0.25rem 0.6rem;
+	}
+
+	.analysis-id {
+		font-family: monospace;
+		font-size: 1rem;
+		color: var(--text-muted);
+	}
+
+	.actions {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.action-btn {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 0.5rem;
+		padding: 0.4rem 0.875rem;
+		font-size: 0.85rem;
+		color: var(--text);
+		cursor: pointer;
+		text-decoration: none;
+		transition: border-color 0.15s;
+	}
+
+	.action-btn:hover {
+		border-color: var(--text-muted);
+	}
+
+	.status-block {
+		display: flex;
+		align-items: center;
+		gap: 1.25rem;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 1rem;
+		padding: 2rem;
+	}
+
+	.status-block.error {
+		border-color: #ef4444;
+	}
+
+	.status-icon {
+		font-size: 1.5rem;
+		color: #ef4444;
+	}
+
+	.status-text {
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--text);
+	}
+
+	.status-sub {
+		font-size: 0.85rem;
+		color: var(--text-muted);
+		margin-top: 0.2rem;
+	}
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
+	}
+
+	.spinner {
+		width: 1.5rem;
+		height: 1.5rem;
+		border: 2px solid var(--border);
+		border-top-color: var(--text-muted);
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+		flex-shrink: 0;
+	}
+
+	.results-area {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 1rem;
+		padding: 3rem;
+		text-align: center;
+	}
+
+	.placeholder {
+		color: var(--text-muted);
+		font-size: 0.95rem;
+	}
+</style>
