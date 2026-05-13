@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { base } from '$app/paths';
 	import { onMount, onDestroy } from 'svelte';
 	import { tools } from '$lib/tools';
 	import { getJobStatus } from '$lib/utils/api';
@@ -51,7 +52,7 @@
 		</div>
 		<div class="actions">
 			<button class="action-btn" onclick={copyId} type="button">Copy ID</button>
-			<a href="/run{tool ? `?tool=${tool.id}` : ''}" class="action-btn">New analysis</a>
+			<a href="{base}/run{tool ? `?tool=${tool.id}` : ''}" class="action-btn">New analysis</a>
 		</div>
 	</div>
 

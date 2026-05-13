@@ -1,15 +1,16 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { theme } from '$lib/stores/theme';
 	import { page } from '$app/stores';
 
 	const navLinks = [
-		{ href: '/help', label: 'Help' },
-		{ href: '/license', label: 'License' }
+		{ href: `${base}/help`, label: 'Help' },
+		{ href: `${base}/license`, label: 'License' }
 	];
 </script>
 
 <nav class="navbar">
-	<a href="/" class="logo">Dezyme</a>
+	<a href="{base}/" class="logo">Dezyme</a>
 
 	<div class="nav-links">
 		{#each navLinks as link}

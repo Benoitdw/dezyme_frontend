@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { tools, toolList } from '$lib/tools';
 	import type { ToolId } from '$lib/tools';
 	import PdbInput from '$lib/components/pdb/PdbInput.svelte';
@@ -49,7 +50,7 @@
 				params: {}
 			});
 			addJob({ id, tool: selectedTool, structureId: pdbMeta.id });
-			goto(`/results/${id}`);
+			goto(`${base}/results/${id}`);
 		} finally {
 			submitting = false;
 		}

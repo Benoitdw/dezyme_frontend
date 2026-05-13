@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { base } from '$app/paths';
 	import { toolList } from '$lib/tools';
 	import { getRecentJobs } from '$lib/utils/storage';
 	import type { StoredJob } from '$lib/utils/storage';
@@ -21,7 +22,7 @@
 
 	<section class="tools">
 		{#each toolList as tool}
-			<a href="/run?tool={tool.id}" class="tool-card" style="--accent: {tool.accent}">
+			<a href="{base}/run?tool={tool.id}" class="tool-card" style="--accent: {tool.accent}">
 				<div class="tool-name">{tool.name}</div>
 				<p class="tool-tagline">{tool.tagline}</p>
 				<span class="launch">Launch →</span>
@@ -36,7 +37,7 @@
 				{#each recentJobs as job}
 					<li>
 						<span class="job-id">{job.id}</span>
-						<a href="/results/{job.id}" class="open-link">Open →</a>
+						<a href="{base}/results/{job.id}" class="open-link">Open →</a>
 					</li>
 				{/each}
 			</ul>

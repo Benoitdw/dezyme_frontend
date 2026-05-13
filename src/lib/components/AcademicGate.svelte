@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
+	import { base } from '$app/paths';
 
 	const STORAGE_KEY = 'dezyme_academic_confirmed';
 
@@ -17,7 +18,7 @@
 
 	function goCommercial() {
 		visible = false;
-		goto('/license');
+		goto(`${base}/license`);
 	}
 </script>
 
@@ -52,7 +53,7 @@
 
 			<p class="note">
 				Dezyme is free for academic use. Commercial users must obtain a license.
-				<a href="/license">Learn more</a>
+				<a href="{base}/license">Learn more</a>
 			</p>
 		</div>
 	</div>
