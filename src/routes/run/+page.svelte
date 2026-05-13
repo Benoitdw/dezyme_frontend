@@ -17,14 +17,25 @@
 	let selectedChains = $state<string[]>([]);
 	let pdbError = $state<string | null>(null);
 	let submitting = $state(false);
+	let transitioning = $state(false);
 
 	let tool = $derived(tools[selectedTool]);
 
-	function onToolChange(id: ToolId) {
+	$effect(() => {
+		document.body.setAttribute('data-tool', selectedTool);
+		return () => document.body.removeAttribute('data-tool');
+	});
+
+	async function onToolChange(id: ToolId) {
+		transitioning = true;
+		document.body.classList.add('tool-transitioning');
+		await new Promise<void>((r) => setTimeout(r, 280));
 		selectedTool = id;
 		if (pdbMeta) {
-			selectedChains = tool.chainRule.preselect(pdbMeta.chains);
+			selectedChains = tools[id].chainRule.preselect(pdbMeta.chains);
 		}
+		document.body.classList.remove('tool-transitioning');
+		transitioning = false;
 	}
 
 	function onPdbLoaded(meta: PdbMeta) {
@@ -57,7 +68,7 @@
 	}
 </script>
 
-<div class="page">
+<div class="page" data-tool={selectedTool} class:transitioning>
 	<div class="tool-tabs">
 		{#each toolList as t}
 			<button
@@ -117,6 +128,74 @@
 		max-width: 960px;
 		margin: 0 auto;
 		padding: 2.5rem 2rem;
+		position: relative;
+		border-radius: 1.25rem;
+		transition: opacity 0.28s ease;
+	}
+
+	.page.transitioning {
+		opacity: 0;
+	}
+
+	/* ── hotmusic — fire & heat ─────────────────────────────────── */
+
+	.page[data-tool='hotmusic'] :global(.form-card) {
+		border-color: rgba(251, 113, 30, 0.3);
+		box-shadow: 0 0 28px rgba(251, 113, 30, 0.12), 0 0 72px rgba(239, 68, 68, 0.06);
+		animation: ember-glow 4s ease-in-out infinite;
+	}
+
+	@keyframes ember-glow {
+		0%, 100% { box-shadow: 0 0 28px rgba(251, 113, 30, 0.12), 0 0 72px rgba(239, 68, 68, 0.06); }
+		50% { box-shadow: 0 0 40px rgba(251, 113, 30, 0.22), 0 0 90px rgba(239, 68, 68, 0.12); }
+	}
+
+	.page[data-tool='hotmusic'] :global(.section-label) {
+		color: #c2410c;
+	}
+
+	.page[data-tool='hotmusic'] :global(.submit-btn) {
+		background: linear-gradient(135deg, #ea580c, #dc2626);
+	}
+
+	/* ── popmusic — bubbly & vivid ──────────────────────────────── */
+
+	.page[data-tool='popmusic'] :global(.form-card) {
+		border-color: rgba(236, 72, 153, 0.2);
+		border-radius: 1.75rem;
+	}
+
+	.page[data-tool='popmusic'] :global(.tool-tabs) {
+		border-radius: 999px;
+	}
+
+	.page[data-tool='popmusic'] :global(.tab) {
+		border-radius: 999px;
+	}
+
+	.page[data-tool='popmusic'] :global(.section-label) {
+		color: #db2777;
+	}
+
+	.page[data-tool='popmusic'] :global(.submit-btn) {
+		background: linear-gradient(135deg, #ec4899, #a855f7);
+		border-radius: 999px;
+	}
+
+	/* ── snpmusic — mutations & genomics ────────────────────────── */
+
+	.page[data-tool='snpmusic'] :global(.form-card) {
+		border-color: rgba(16, 185, 129, 0.25);
+	}
+
+	.page[data-tool='snpmusic'] :global(.section-label) {
+		font-family: 'Courier New', Courier, monospace;
+		color: #059669;
+		letter-spacing: 0.1em;
+	}
+
+	.page[data-tool='snpmusic'] :global(.submit-btn) {
+		background: linear-gradient(135deg, #059669, #0284c7);
 	}
 
 	.tool-tabs {

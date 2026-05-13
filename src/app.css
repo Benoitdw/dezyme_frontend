@@ -25,7 +25,73 @@ body {
 	font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 	background-color: var(--bg);
 	color: var(--text);
-	transition: background-color 0.2s ease, color 0.2s ease;
+	transition: background 0.5s ease, color 0.2s ease;
 	line-height: 1.6;
 	font-size: 16px;
+}
+
+/* ── Tool themes ────────────────────────────────────────────────── */
+
+/* Full-screen background layer — only this fades, content stays put */
+body::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	opacity: 1;
+	transition: opacity 0.28s ease;
+}
+
+body.tool-transitioning::before {
+	opacity: 0;
+}
+
+/* hotmusic — fire & heat */
+body[data-tool='hotmusic']::before {
+	background: linear-gradient(145deg, #fff7ed, #fef3c7, #fff0e6, #fff7ed);
+	background-size: 300% 300%;
+	animation: hot-shift 8s ease-in-out infinite;
+}
+
+@keyframes hot-shift {
+	0%, 100% { background-position: 0% 50%; }
+	50%       { background-position: 100% 50%; }
+}
+
+/* popmusic — bubbly & vivid */
+body[data-tool='popmusic']::before {
+	background-image:
+		radial-gradient(circle, rgba(236, 72, 153, 0.07) 1.5px, transparent 1.5px),
+		linear-gradient(135deg, #fdf2f8 0%, #f0f9ff 50%, #fdf4ff 100%);
+	background-size: 22px 22px, 100% 100%;
+}
+
+/* snpmusic — mutations & genomics */
+body[data-tool='snpmusic']::before {
+	background-image:
+		repeating-linear-gradient(0deg,  rgba(16, 185, 129, 0.07) 0px, transparent 1px, transparent 28px),
+		repeating-linear-gradient(90deg, rgba(16, 185, 129, 0.07) 0px, transparent 1px, transparent 28px),
+		linear-gradient(145deg, #f0fdf4 0%, #ecfdf5 60%, #f0fdfa 100%);
+}
+
+/* Dark mode variants */
+:root[data-theme='dark'] body[data-tool='hotmusic']::before {
+	background: linear-gradient(145deg, #1c0a00, #2d1200, #1a0800, #2d1200);
+	background-size: 300% 300%;
+	animation: hot-shift 8s ease-in-out infinite;
+}
+
+:root[data-theme='dark'] body[data-tool='popmusic']::before {
+	background-image:
+		radial-gradient(circle, rgba(236, 72, 153, 0.08) 1.5px, transparent 1.5px),
+		linear-gradient(135deg, #1a0d1a 0%, #0d1a2e 50%, #1a0d2e 100%);
+	background-size: 22px 22px, 100% 100%;
+}
+
+:root[data-theme='dark'] body[data-tool='snpmusic']::before {
+	background-image:
+		repeating-linear-gradient(0deg,  rgba(16, 185, 129, 0.08) 0px, transparent 1px, transparent 28px),
+		repeating-linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0px, transparent 1px, transparent 28px),
+		linear-gradient(145deg, #001a0f 0%, #00150c 60%, #00120a 100%);
 }
