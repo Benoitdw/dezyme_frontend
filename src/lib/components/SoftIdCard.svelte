@@ -138,8 +138,8 @@
 	.footer {
 		display: flex;
 		align-items: center;
+		justify-content: space-between;
 		gap: 0.75rem;
-		flex-wrap: wrap;
 	}
 
 	.doi {

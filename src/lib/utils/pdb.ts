@@ -23,14 +23,17 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 		if (!res.ok) throw new Error(`PDB entry ${id} not found`);
 		const data = await res.json();
 
-		const chainsRes = await fetch(`https://data.rcsb.org/rest/v1/core/entry/${id}/polymer_entities`);
-		let chains: string[] = [];
-		if (chainsRes.ok) {
-			const chainsData = await chainsRes.json();
-			chains = chainsData.flatMap((e: { rcsb_entity_container_identifiers?: { auth_asym_ids?: string[] } }) =>
-				e.rcsb_entity_container_identifiers?.auth_asym_ids ?? []
-			);
-		}
+		const entityIds: string[] = data.rcsb_entry_container_identifiers?.polymer_entity_ids ?? [];
+		const entityResponses = await Promise.all(
+			entityIds.map((eid: string) =>
+				fetch(`https://data.rcsb.org/rest/v1/core/polymer_entity/${id}/${eid}`).then((r) =>
+					r.ok ? r.json() : null
+				)
+			)
+		);
+		const chains: string[] = entityResponses.flatMap((e) =>
+			e?.rcsb_polymer_entity_container_identifiers?.auth_asym_ids ?? []
+		);
 
 		return {
 			id,

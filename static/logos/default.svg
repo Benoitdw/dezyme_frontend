@@ -1,22 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
-  <!-- Protein backbone ribbon (wavy chain) -->
-  <path d="M12 52 C18 44, 24 56, 30 48 C36 40, 42 52, 48 44 C54 36, 60 48, 68 40"
-        stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- App icon background -->
+  <rect x="8" y="8" width="64" height="64" rx="14" fill="#e5e7eb"/>
 
-  <!-- Side chain atoms -->
-  <circle cx="21" cy="50" r="3.5" fill="#d1d5db" stroke="#9ca3af" stroke-width="1.5"/>
-  <circle cx="39" cy="46" r="3.5" fill="#d1d5db" stroke="#9ca3af" stroke-width="1.5"/>
-  <circle cx="57" cy="42" r="3.5" fill="#d1d5db" stroke="#9ca3af" stroke-width="1.5"/>
+  <!-- DNA strand 1 (left curve) -->
+  <path d="M30 18 C24 26, 36 34, 30 42 C24 50, 36 58, 30 66"
+        stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" fill="none"/>
 
-  <!-- Alpha helix hint at top-left -->
-  <path d="M14 32 C17 28, 23 28, 26 32 C29 36, 23 40, 20 36"
-        stroke="#9ca3af" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <!-- DNA strand 2 (right curve) -->
+  <path d="M50 18 C56 26, 44 34, 50 42 C56 50, 44 58, 50 66"
+        stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" fill="none"/>
 
-  <!-- Beta sheet arrow at top-right -->
-  <path d="M50 26 L62 26 L66 30 L62 34 L50 34 Z"
-        stroke="#9ca3af" stroke-width="1.5" stroke-linejoin="round" fill="#e5e7eb"/>
-
-  <!-- Code brackets — software reference -->
-  <path d="M30 14 L24 19 L30 24" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <path d="M38 14 L44 19 L38 24" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Rungs -->
+  <line x1="30" y1="24" x2="50" y2="24" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"/>
+  <line x1="28" y1="34" x2="52" y2="34" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"/>
+  <line x1="30" y1="42" x2="50" y2="42" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"/>
+  <line x1="28" y1="50" x2="52" y2="50" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"/>
+  <line x1="30" y1="60" x2="50" y2="60" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"/>
 </svg>
