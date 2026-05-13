@@ -13,6 +13,14 @@
 	--text-muted: #64748b;
 }
 
+:root[data-theme="dark"] {
+	--bg: #0d1b3e;
+	--surface: #0f2252;
+	--border: rgba(59, 130, 246, 0.15);
+	--text: #e8eaf0;
+	--text-muted: #64748b;
+}
+
 body {
 	font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 	background-color: var(--bg);
