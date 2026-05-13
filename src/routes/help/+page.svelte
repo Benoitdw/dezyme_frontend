@@ -1,3 +1,7 @@
+<script>
+	import { base } from '$app/paths';
+</script>
+
 <div class="page">
 	<h1>Help</h1>
 
@@ -8,7 +12,7 @@
 
 	<section>
 		<h2>Step 1 — Select a tool</h2>
-		<p>Choose the tool that matches your analysis goal from the tabs at the top of the <a href="/run">run page</a>.</p>
+		<p>Choose the tool that matches your analysis goal from the tabs at the top of the <a href="{base}/run">run page</a>.</p>
 		<ul>
 			<li><strong>PopMuSiC</strong> — predicts the change in thermodynamic stability (ΔΔG) upon mutation.</li>
 			<li><strong>HoTMuSiC</strong> — predicts the change in thermal stability (ΔTm) upon mutation.</li>

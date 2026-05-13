@@ -1,9 +1,12 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import type { ToolConfig } from '$lib/tools/types';
 
 	let { tool }: { tool: ToolConfig } = $props();
 
 	let copied = $state(false);
+
+	const defaultLogo = `${base}/logos/default.svg`;
 
 	function copyBib() {
 		if (!tool.bibTeX) return;
@@ -14,14 +17,14 @@
 	}
 
 	function onImgError(e: Event) {
-		(e.currentTarget as HTMLImageElement).src = '/logos/default.svg';
+		(e.currentTarget as HTMLImageElement).src = defaultLogo;
 	}
 </script>
 
 <div class="card">
 	<div class="logo-wrap">
 		<img
-			src={tool.logoPath ?? '/logos/default.svg'}
+			src={tool.logoPath ? `${base}${tool.logoPath}` : defaultLogo}
 			alt="{tool.name} logo"
 			class="logo"
 			onerror={onImgError}
