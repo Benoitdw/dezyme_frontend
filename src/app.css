@@ -14,9 +14,9 @@
 }
 
 :root[data-theme="dark"] {
-	--bg: #0d1b3e;
-	--surface: #0f2252;
-	--border: rgba(59, 130, 246, 0.15);
+	--bg: #111318;
+	--surface: #1c1e26;
+	--border: rgba(255, 255, 255, 0.08);
 	--text: #e8eaf0;
 	--text-muted: #64748b;
 }
@@ -75,23 +75,45 @@ body[data-tool='snpmusic']::before {
 		linear-gradient(145deg, #f0fdf4 0%, #ecfdf5 60%, #f0fdfa 100%);
 }
 
-/* Dark mode variants */
+/* Dark mode variants — thematic dark palette per tool */
+:root[data-theme='dark'] body[data-tool='hotmusic'] {
+	--bg:      #130d07;
+	--surface: #1e1309;
+	--border:  rgba(251, 113, 30, 0.2);
+}
+
 :root[data-theme='dark'] body[data-tool='hotmusic']::before {
-	background: linear-gradient(145deg, #1c0a00, #2d1200, #1a0800, #2d1200);
+	background:
+		radial-gradient(ellipse at 50% 40%, rgba(251, 113, 30, 0.12) 0%, transparent 60%),
+		linear-gradient(145deg, #130d07, #1c1008);
 	background-size: 300% 300%;
 	animation: hot-shift 8s ease-in-out infinite;
 }
 
+:root[data-theme='dark'] body[data-tool='popmusic'] {
+	--bg:      #10081a;
+	--surface: #190d25;
+	--border:  rgba(236, 72, 153, 0.2);
+}
+
 :root[data-theme='dark'] body[data-tool='popmusic']::before {
 	background-image:
-		radial-gradient(circle, rgba(236, 72, 153, 0.08) 1.5px, transparent 1.5px),
-		linear-gradient(135deg, #1a0d1a 0%, #0d1a2e 50%, #1a0d2e 100%);
-	background-size: 22px 22px, 100% 100%;
+		radial-gradient(circle, rgba(236, 72, 153, 0.07) 1.5px, transparent 1.5px),
+		radial-gradient(ellipse at 50% 40%, rgba(236, 72, 153, 0.12) 0%, transparent 60%),
+		linear-gradient(135deg, #10081a, #160d28);
+	background-size: 22px 22px, 100% 100%, 100% 100%;
+}
+
+:root[data-theme='dark'] body[data-tool='snpmusic'] {
+	--bg:      #07100c;
+	--surface: #0d1a12;
+	--border:  rgba(16, 185, 129, 0.2);
 }
 
 :root[data-theme='dark'] body[data-tool='snpmusic']::before {
 	background-image:
-		repeating-linear-gradient(0deg,  rgba(16, 185, 129, 0.08) 0px, transparent 1px, transparent 28px),
-		repeating-linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0px, transparent 1px, transparent 28px),
-		linear-gradient(145deg, #001a0f 0%, #00150c 60%, #00120a 100%);
+		repeating-linear-gradient(0deg,  rgba(16, 185, 129, 0.06) 0px, transparent 1px, transparent 28px),
+		repeating-linear-gradient(90deg, rgba(16, 185, 129, 0.06) 0px, transparent 1px, transparent 28px),
+		radial-gradient(ellipse at 50% 40%, rgba(16, 185, 129, 0.10) 0%, transparent 60%),
+		linear-gradient(145deg, #07100c, #0b1810);
 }
