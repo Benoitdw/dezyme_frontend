@@ -9,7 +9,19 @@ export const hotmusic: ToolConfig = {
 		preselect: (chains) => chains.slice(0, 1),
 		multiple: false
 	},
-	fields: [],
+	fields: [
+		{
+			name: 'tm_wt',
+			label: 'Melting temperature of the wild type protein',
+			type: 'number',
+			placeholder: 'unknown',
+			unit: 'K',
+			min: 273.0,
+			max: 413.0,
+			step: 0.1,
+			hint: 'Leave empty if unknown.'
+		}
+	],
 	description:
 		'HoTMuSiC predicts the change in melting temperature (ΔTm) caused by single-site mutations in proteins. It relies on statistical potentials derived from thermophilic and mesophilic protein structures and experimental stability data.',
 	tags: ['thermal stability', 'ΔTm', 'melting temperature', 'single mutations'],

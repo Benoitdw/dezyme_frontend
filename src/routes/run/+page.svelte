@@ -18,6 +18,31 @@
 	let pdbError = $state<string | null>(null);
 	let submitting = $state(false);
 	let transitioning = $state(false);
+	let fieldValues = $state<Record<string, string>>({});
+	let fieldErrors = $state<Record<string, string>>({});
+
+	function validateField(name: string, raw: string) {
+		const field = tool.fields.find((f) => f.name === name);
+		if (!field || raw === '') { fieldErrors[name] = ''; return; }
+		const v = parseFloat(raw);
+		if (isNaN(v)) { fieldErrors[name] = 'Must be a number'; return; }
+		if (field.min !== undefined && v < field.min) {
+			fieldErrors[name] = `Min ${field.min} ${field.unit ?? ''}`.trim();
+			return;
+		}
+		if (field.max !== undefined && v > field.max) {
+			fieldErrors[name] = `Max ${field.max} ${field.unit ?? ''}`.trim();
+			return;
+		}
+		fieldErrors[name] = '';
+	}
+
+	function setField(name: string, value: string) {
+		fieldValues[name] = value;
+		validateField(name, value);
+	}
+
+	let hasFieldErrors = $derived(Object.values(fieldErrors).some((e) => e !== ''));
 
 	let tool = $derived(tools[selectedTool]);
 
@@ -58,7 +83,7 @@
 				tool: selectedTool,
 				structureId: pdbMeta.id,
 				chains: selectedChains,
-				params: {}
+				params: fieldValues
 			});
 			addJob({ id, tool: selectedTool, structureId: pdbMeta.id });
 			goto(`${base}/results/${id}`);
@@ -111,11 +136,56 @@
 			</section>
 		{/if}
 
+		{#if tool.fields.length > 0}
+			<section class="section">
+				<label class="section-label">Parameters</label>
+				<div class="fields">
+					{#each tool.fields as field}
+						{@const val = fieldValues[field.name] ?? ''}
+						{@const err = fieldErrors[field.name] ?? ''}
+						<div class="field">
+							<label class="field-label" for={field.name}>{field.label}</label>
+							<div class="field-input-row">
+								<input
+									id={field.name}
+									type="number"
+									min={field.min}
+									max={field.max}
+									step={field.step ?? 'any'}
+									placeholder={field.placeholder ?? ''}
+									value={val}
+									oninput={(e) => setField(field.name, (e.target as HTMLInputElement).value)}
+									class="field-input"
+									class:invalid={err !== ''}
+								/>
+								{#if field.unit}
+									<span class="field-unit">{field.unit}</span>
+								{/if}
+								{#if val !== ''}
+									<button
+										type="button"
+										class="field-clear"
+										onclick={() => setField(field.name, '')}
+										aria-label="Reset to unknown"
+									>×</button>
+								{/if}
+							</div>
+							{#if err !== ''}
+								<p class="field-error">{err}</p>
+							{:else if field.hint}
+								<p class="field-hint">{field.hint}</p>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			</section>
+		{/if}
+
 		<button
 			class="submit-btn"
 			style="--accent: {tool.accent}"
 			onclick={handleSubmit}
-			disabled={!pdbMeta || selectedChains.length === 0 || submitting}
+			disabled={!pdbMeta || selectedChains.length === 0 || submitting || hasFieldErrors}
 			type="button"
 		>
 			{submitting ? 'Submitting...' : `Run ${tool.name}`}
@@ -239,6 +309,79 @@
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 		color: var(--text-muted);
+	}
+
+	.fields {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.field {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.field-label {
+		font-size: 0.875rem;
+		color: var(--text);
+	}
+
+	.field-input-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.field-input {
+		background: var(--bg);
+		border: 1px solid var(--border);
+		border-radius: 0.5rem;
+		padding: 0.45rem 0.75rem;
+		font-size: 0.875rem;
+		color: var(--text);
+		width: 160px;
+		transition: border-color 0.15s;
+	}
+
+	.field-input:focus {
+		outline: none;
+		border-color: var(--text-muted);
+	}
+
+	.field-input.invalid {
+		border-color: #ef4444;
+	}
+
+	.field-unit {
+		font-size: 0.875rem;
+		color: var(--text-muted);
+	}
+
+	.field-clear {
+		background: none;
+		border: none;
+		padding: 0 0.25rem;
+		font-size: 1rem;
+		color: var(--text-muted);
+		cursor: pointer;
+		line-height: 1;
+		transition: color 0.15s;
+	}
+
+	.field-clear:hover {
+		color: var(--text);
+	}
+
+	.field-hint {
+		font-size: 0.78rem;
+		color: var(--text-muted);
+	}
+
+	.field-error {
+		font-size: 0.78rem;
+		color: #ef4444;
 	}
 
 	.error {

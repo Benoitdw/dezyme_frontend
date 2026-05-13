@@ -12,6 +12,12 @@ export interface ToolField {
 	options?: { value: string; label: string }[];
 	default?: string | number | boolean;
 	required?: boolean;
+	min?: number;
+	max?: number;
+	step?: number;
+	unit?: string;
+	placeholder?: string;
+	hint?: string;
 }
 
 export interface ToolConfig {

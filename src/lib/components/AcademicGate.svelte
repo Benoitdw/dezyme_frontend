@@ -44,10 +44,10 @@
 
 			<div class="actions">
 				<button class="btn-primary" onclick={confirmAcademic}>
-					Yes, academic / research use
+					Yes, Academic / Research Use
 				</button>
 				<button class="btn-secondary" onclick={goCommercial}>
-					No, commercial use
+					No, Commercial Use
 				</button>
 			</div>
 
