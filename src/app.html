@@ -6,6 +6,9 @@
 		<meta name="text-scale" content="scale" />
 		%sveltekit.head%
 	</head>
+	<script>
+		try { document.documentElement.setAttribute('data-theme', localStorage.getItem('dezyme_theme') || 'light'); } catch {}
+	</script>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>

@@ -6,14 +6,6 @@
 	--accent: #2563eb;
 	--accent-light: #dbeafe;
 
-	--bg: #0d1b3e;
-	--surface: #0f2252;
-	--border: rgba(59, 130, 246, 0.15);
-	--text: #e8eaf0;
-	--text-muted: #64748b;
-}
-
-:root[data-theme="light"] {
 	--bg: #f8fafc;
 	--surface: #ffffff;
 	--border: #e2e8f0;
