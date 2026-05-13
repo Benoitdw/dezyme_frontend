@@ -69,7 +69,7 @@
 		<div class="input-wrap">
 			<input
 				type="text"
-				placeholder="4ABC or P12345 or paste ID..."
+				placeholder="3BIO or P12345 or paste ID..."
 				bind:value={inputValue}
 				onkeydown={handleKeydown}
 				class="text-input"
