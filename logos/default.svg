@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+  <!-- App icon background -->
+  <rect x="8" y="8" width="64" height="64" rx="14" fill="#e5e7eb"/>
+
+  <!-- DNA strand 1 (left curve) -->
+  <path d="M30 18 C24 26, 36 34, 30 42 C24 50, 36 58, 30 66"
+        stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+  <!-- DNA strand 2 (right curve) -->
+  <path d="M50 18 C56 26, 44 34, 50 42 C56 50, 44 58, 50 66"
+        stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+  <!-- Rungs -->
+  <line x1="30" y1="24" x2="50" y2="24" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"/>
+  <line x1="28" y1="34" x2="52" y2="34" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"/>
+  <line x1="30" y1="42" x2="50" y2="42" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"/>
+  <line x1="28" y1="50" x2="52" y2="50" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"/>
+  <line x1="30" y1="60" x2="50" y2="60" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"/>
+</svg>

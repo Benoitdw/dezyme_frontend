@@ -1,0 +1,27 @@
+var e={id:`popmusic`,name:`PopMuSiC`,tagline:`Predict the thermodynamic stability changes induced by single-site mutations`,accent:`#6366f1`,chainRule:{preselect:e=>e.slice(0,1),multiple:!1},fields:[],description:`PopMuSiC predicts the thermodynamic stability change (ΔΔG) upon single amino acid substitutions in proteins. It uses a combination of statistical potentials and machine learning trained on a large dataset of experimental measurements.`,tags:[`thermodynamic stability`,`ΔΔG`,`single mutations`,`machine learning`],doi:`10.1093/bioinformatics/btp445`,bibTeX:`@article{Dehouck2011,
+  author  = {Dehouck, Yves and Kwasigroch, Jean Marc and Gilis, Dimitri and Rooman, Marianne},
+  title   = {PoPMuSiC 2.1: a web server for the estimation of protein stability changes upon mutation},
+  journal = {Nucleic Acids Research},
+  year    = {2011},
+  volume  = {39},
+  number  = {suppl_2},
+  pages   = {W448--W455},
+  doi     = {10.1093/nar/gkr353}
+}`,logoPath:`/logos/popmusic.svg`},t={id:`hotmusic`,name:`HoTMuSiC`,tagline:`Predict the effects of mutations on protein thermal stability`,accent:`#f59e0b`,chainRule:{preselect:e=>e.slice(0,1),multiple:!1},fields:[],description:`HoTMuSiC predicts the change in melting temperature (ΔTm) caused by single-site mutations in proteins. It relies on statistical potentials derived from thermophilic and mesophilic protein structures and experimental stability data.`,tags:[`thermal stability`,`ΔTm`,`melting temperature`,`single mutations`],doi:`10.1093/bioinformatics/btv595`,bibTeX:`@article{Pucci2016,
+  author  = {Pucci, Fabrizio and Bourgeas, Romain and Rooman, Marianne},
+  title   = {Predicting protein thermal stability changes upon point mutations using statistical potentials: Introducing HoTMuSiC},
+  journal = {Scientific Reports},
+  year    = {2016},
+  volume  = {6},
+  pages   = {23257},
+  doi     = {10.1038/srep23257}
+}`,logoPath:`/logos/hotmusic.svg`},n={id:`snpmusic`,name:`SNPMuSiC`,tagline:`Predict the pathogenicity of single nucleotide polymorphisms`,accent:`#10b981`,chainRule:{preselect:e=>e,multiple:!0},fields:[],description:`SNPMuSiC assesses the disease-causing potential of missense single nucleotide polymorphisms (SNPs) by evaluating their impact on protein structure and stability. It combines structural features and evolutionary information to discriminate pathogenic from neutral variants.`,tags:[`SNP`,`pathogenicity`,`missense variants`,`disease prediction`],doi:`10.1093/bioinformatics/btu481`,bibTeX:`@article{Raimondi2013,
+  author  = {Raimondi, Daniele and Tanyalcin, Ibrahim and Ferté, Julien and Gilis, Dimitri and Rooman, Marianne},
+  title   = {DEOGEN2: prediction and interactive visualisation of single amino acid variant deleteriousness in human proteins},
+  journal = {Nucleic Acids Research},
+  year    = {2017},
+  volume  = {45},
+  number  = {W1},
+  pages   = {W201--W206},
+  doi     = {10.1093/nar/gkx390}
+}`,logoPath:`/logos/snpmusic.svg`},r={popmusic:e,hotmusic:t,snpmusic:n},i=[e,t,n],a=`dezyme_jobs`,o=10;function s(){if(typeof localStorage>`u`)return[];try{return JSON.parse(localStorage.getItem(a)??`[]`)}catch{return[]}}function c(e){localStorage.setItem(a,JSON.stringify(e))}function l(e){let t=s().filter(t=>t.id!==e.id);t.unshift(e),c(t.slice(0,o))}function u(){return s()}function d(e){let t=e.split(`_`)[0];return[`popmusic`,`hotmusic`,`snpmusic`].includes(t)?t:null}export{r as a,i,u as n,d as r,l as t};
