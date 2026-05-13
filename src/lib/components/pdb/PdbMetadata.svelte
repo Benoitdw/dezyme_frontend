@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { base } from '$app/paths';
+	import { theme } from '$lib/stores/theme';
 	import type { PdbMetadata } from '$lib/utils/pdb';
 
 	interface Props {
@@ -54,8 +55,17 @@
 		viewer.setColorsMap(map);
 	});
 
+	$effect(() => {
+		$theme;  // reactive: theme toggle
+		accent;  // reactive: tool switch (surface var changes per tool)
+		if (!viewer) return;
+		// tick() ensures body[data-tool] is updated before we read --surface
+		tick().then(() => viewer.setBackgroundColor(getBgColor()));
+	});
+
 	function getBgColor(): [number, number, number] {
-		const surface = getComputedStyle(document.documentElement)
+		// read from body — tool themes override --surface there, not on :root
+		const surface = getComputedStyle(document.body)
 			.getPropertyValue('--surface')
 			.trim();
 		const m = surface.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
