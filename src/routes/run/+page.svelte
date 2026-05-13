@@ -162,15 +162,6 @@
 
 	.page[data-tool='popmusic'] :global(.form-card) {
 		border-color: rgba(236, 72, 153, 0.2);
-		border-radius: 1.75rem;
-	}
-
-	.page[data-tool='popmusic'] :global(.tool-tabs) {
-		border-radius: 999px;
-	}
-
-	.page[data-tool='popmusic'] :global(.tab) {
-		border-radius: 999px;
 	}
 
 	.page[data-tool='popmusic'] :global(.section-label) {
@@ -179,7 +170,6 @@
 
 	.page[data-tool='popmusic'] :global(.submit-btn) {
 		background: linear-gradient(135deg, #ec4899, #a855f7);
-		border-radius: 999px;
 	}
 
 	/* ── snpmusic — mutations & genomics ────────────────────────── */

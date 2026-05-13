@@ -63,8 +63,16 @@ body[data-tool='hotmusic']::before {
 body[data-tool='popmusic']::before {
 	background-image:
 		radial-gradient(circle, rgba(236, 72, 153, 0.07) 1.5px, transparent 1.5px),
-		linear-gradient(135deg, #fdf2f8 0%, #f0f9ff 50%, #fdf4ff 100%);
-	background-size: 22px 22px, 100% 100%;
+		linear-gradient(135deg, #fdf2f8, #fce7f3, #f0f9ff, #fdf4ff, #fce7f3, #fdf2f8);
+	background-size: 22px 22px, 400% 400%;
+	animation: pop-shift 10s ease-in-out infinite;
+}
+
+@keyframes pop-shift {
+	0%        { background-position: 0 0, 0% 50%; }
+	33%       { background-position: 0 0, 60% 30%; }
+	66%       { background-position: 0 0, 30% 80%; }
+	100%      { background-position: 0 0, 0% 50%; }
 }
 
 /* snpmusic — mutations & genomics */
@@ -72,7 +80,15 @@ body[data-tool='snpmusic']::before {
 	background-image:
 		repeating-linear-gradient(0deg,  rgba(16, 185, 129, 0.07) 0px, transparent 1px, transparent 28px),
 		repeating-linear-gradient(90deg, rgba(16, 185, 129, 0.07) 0px, transparent 1px, transparent 28px),
-		linear-gradient(145deg, #f0fdf4 0%, #ecfdf5 60%, #f0fdfa 100%);
+		linear-gradient(135deg, #f0fdf4, #ecfdf5, #f0fdfa, #d1fae5, #ecfdf5, #f0fdf4);
+	background-size: 100% 100%, 100% 100%, 400% 400%;
+	animation: snp-shift 12s ease-in-out infinite;
+}
+
+@keyframes snp-shift {
+	0%   { background-position: 0 0, 0 0, 0% 50%; }
+	50%  { background-position: 0 0, 0 0, 100% 50%; }
+	100% { background-position: 0 0, 0 0, 0% 50%; }
 }
 
 /* Dark mode variants — thematic dark palette per tool */
@@ -99,9 +115,9 @@ body[data-tool='snpmusic']::before {
 :root[data-theme='dark'] body[data-tool='popmusic']::before {
 	background-image:
 		radial-gradient(circle, rgba(236, 72, 153, 0.07) 1.5px, transparent 1.5px),
-		radial-gradient(ellipse at 50% 40%, rgba(236, 72, 153, 0.12) 0%, transparent 60%),
-		linear-gradient(135deg, #10081a, #160d28);
-	background-size: 22px 22px, 100% 100%, 100% 100%;
+		linear-gradient(135deg, #10081a, #1a0a2e, #10081a, #160d20, #1a0a2e, #10081a);
+	background-size: 22px 22px, 400% 400%;
+	animation: pop-shift 10s ease-in-out infinite;
 }
 
 :root[data-theme='dark'] body[data-tool='snpmusic'] {
@@ -114,6 +130,7 @@ body[data-tool='snpmusic']::before {
 	background-image:
 		repeating-linear-gradient(0deg,  rgba(16, 185, 129, 0.06) 0px, transparent 1px, transparent 28px),
 		repeating-linear-gradient(90deg, rgba(16, 185, 129, 0.06) 0px, transparent 1px, transparent 28px),
-		radial-gradient(ellipse at 50% 40%, rgba(16, 185, 129, 0.10) 0%, transparent 60%),
-		linear-gradient(145deg, #07100c, #0b1810);
+		linear-gradient(135deg, #07100c, #0b180e, #07100c, #091510, #0b180e, #07100c);
+	background-size: 100% 100%, 100% 100%, 400% 400%;
+	animation: snp-shift 12s ease-in-out infinite;
 }
