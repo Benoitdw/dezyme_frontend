@@ -4,6 +4,7 @@
 	import { page } from '$app/stores';
 
 	const navLinks = [
+		{ href: `${base}/run`, label: 'Run' },
 		{ href: `${base}/help`, label: 'Help' },
 		{ href: `${base}/license`, label: 'License' }
 	];
