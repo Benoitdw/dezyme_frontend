@@ -29,12 +29,14 @@
 	}
 
 	onMount(() => {
+		if (toolId) document.body.setAttribute('data-tool', toolId);
 		poll();
 		interval = setInterval(poll, 3000);
 	});
 
 	onDestroy(() => {
 		if (interval) clearInterval(interval);
+		document.body.removeAttribute('data-tool');
 	});
 
 	function copyId() {

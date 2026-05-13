@@ -24,6 +24,12 @@ docker compose up --build
 
 ---
 
+## Credits
+
+3D protein visualisation powered by [LittleProtein](https://github.com/MatsveiTsishyn/LittleProtein) by Matsvei Tsishyn.
+
+---
+
 ## Editing soft ID cards
 
 Each tool displays a **soft ID card** on the run page showing its description, tags, DOI, and a button to copy the BibTeX reference. All card content is defined alongside the tool configuration.
