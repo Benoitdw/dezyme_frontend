@@ -4117,7 +4117,7 @@ ATOM   2924  HH  TYR C 109      45.906  14.494  74.486  1.00  0.00           H  
             // Inject link
             sketch.textAlign(sketch.RIGHT);
             sketch.textSize(13);
-            sketch.text(ProteinDrawer.PROJECT_LINK, this.X - 13, this.Y - 13);
+            //sketch.text(ProteinDrawer.PROJECT_LINK, this.X - 13, this.Y - 13);
 
         }
 

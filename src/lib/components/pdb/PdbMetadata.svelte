@@ -1,23 +1,34 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { base } from '$app/paths';
 	import type { PdbMetadata } from '$lib/utils/pdb';
 
 	interface Props {
 		meta: PdbMetadata;
+		selectedChains?: string[];
+		accent?: string;
 	}
 
-	let { meta }: Props = $props();
+	let { meta, selectedChains = [], accent = '#6366f1' }: Props = $props();
 
 	let viewerEl: HTMLAnchorElement | undefined;
+	let viewer = $state<any>(null);
 	const isPdbId = /^[A-Z0-9]{4}$/.test(meta.id);
 	const viewerId = `lp-${Math.random().toString(36).slice(2)}`;
+
+	const DIMMED_COLOR = [140, 140, 150];
+
+	function hexToRgb(hex: string): [number, number, number] {
+		const m = hex.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+		return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [99, 102, 241];
+	}
 
 	onMount(() => {
 		if (!isPdbId) return;
 
 		function initViewer() {
 			const lp = (window as any).LittleProteinStarter;
-			const viewer = lp.start(`#${viewerId}`, 180, 180, {
+			viewer = lp.start(`#${viewerId}`, 180, 180, {
 				backgroundColor: getBgColor()
 			});
 			viewer.fetch(meta.id);
@@ -27,10 +38,20 @@
 			initViewer();
 		} else {
 			const script = document.createElement('script');
-			script.src = '/littleprotein.js';
+			script.src = `${base}/littleprotein.js`;
 			script.onload = initViewer;
 			document.head.appendChild(script);
 		}
+	});
+
+	$effect(() => {
+		if (!viewer || meta.chains.length === 0) return;
+		const selectedColor = hexToRgb(accent);
+		const map: Record<string, number[]> = {};
+		for (const chain of meta.chains) {
+			map[chain] = selectedChains.includes(chain) ? selectedColor : DIMMED_COLOR;
+		}
+		viewer.setColorsMap(map);
 	});
 
 	function getBgColor(): [number, number, number] {

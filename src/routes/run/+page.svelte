@@ -97,7 +97,7 @@
 		{#if pdbMeta}
 			<section class="section">
 				<label class="section-label">Metadata</label>
-				<PdbMetadata meta={pdbMeta} />
+				<PdbMetadata meta={pdbMeta} {selectedChains} accent={tool.accent} />
 			</section>
 
 			<section class="section">
