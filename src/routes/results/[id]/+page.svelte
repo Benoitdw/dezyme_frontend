@@ -7,7 +7,7 @@
 	import { parseToolFromId } from '$lib/utils/storage';
 	import type { JobStatus } from '$lib/utils/api';
 
-	const analysisId = $page.params.id;
+	const analysisId = $page.params.id ?? '';
 	const toolId = parseToolFromId(analysisId);
 	const tool = toolId ? tools[toolId] : null;
 

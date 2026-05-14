@@ -57,7 +57,18 @@
 	// Canvas refs for charts
 	let canvasProfile = $state<HTMLCanvasElement | undefined>();
 	let canvasScatter = $state<HTMLCanvasElement | undefined>();
-	let canvasDist = $state<HTMLCanvasElement | undefined>();
+	let canvasDist    = $state<HTMLCanvasElement | undefined>();
+
+	// Modal
+	type ModalChart = 'profile' | 'scatter' | 'dist';
+	let modalChart  = $state<ModalChart | null>(null);
+	let canvasModal = $state<HTMLCanvasElement | undefined>();
+
+	const MODAL_TITLES: Record<ModalChart, string> = {
+		profile: 'Mutation sensitivity profile',
+		scatter: 'Accessibility vs mutation effect',
+		dist:    'ΔΔG distribution',
+	};
 
 	type SummaryCol = 'accessibility' | 'avgDdg' | 'sumNegDdg' | 'sumPosDdg';
 	let summarySort = $state<{ col: SummaryCol; dir: 1 | -1 }>({ col: 'avgDdg', dir: 1 });
@@ -215,8 +226,8 @@
 			label: SS_LABELS[ss] ?? ss,
 			data: pts,
 			backgroundColor: `${SS_COLORS[ss] ?? '#94a3b8'}cc`,
-			pointRadius: 5,
-			pointHoverRadius: 7,
+			pointRadius: 3,
+			pointHoverRadius: 5,
 		}));
 		return new C(canvas, {
 			type: 'scatter',
@@ -321,13 +332,28 @@
 		return () => chart.destroy();
 	});
 
+	$effect(() => {
+		if (!Chart || !canvasModal || !modalChart) return;
+		void $theme;
+		const chart =
+			modalChart === 'profile' ? makeProfileChart(canvasModal, filteredSummary) :
+			modalChart === 'scatter' ? makeScatterChart(canvasModal, filteredSummary) :
+			makeDistChart(canvasModal, filteredMutations);
+		return () => chart.destroy();
+	});
+
 	onMount(() => {
 		document.body.setAttribute('data-tool', 'popmusic');
 		import('chart.js').then(({ Chart: C, registerables }) => {
 			C.register(...registerables);
 			Chart = C as unknown as typeof ChartType;
 		});
-		return () => document.body.removeAttribute('data-tool');
+		const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') modalChart = null; };
+		document.addEventListener('keydown', onKey);
+		return () => {
+			document.body.removeAttribute('data-tool');
+			document.removeEventListener('keydown', onKey);
+		};
 	});
 </script>
 
@@ -449,18 +475,36 @@
 		<!-- Charts section -->
 		<div class="charts-section">
 			<div class="charts-grid">
-				<div class="chart-card">
-					<div class="chart-title">Mutation sensitivity profile</div>
+				<div class="chart-card chart-clickable" role="button" tabindex="0"
+					onclick={() => modalChart = 'profile'}
+					onkeydown={(e) => e.key === 'Enter' && (modalChart = 'profile')}
+				>
+					<div class="chart-card-header">
+						<div class="chart-title">Mutation sensitivity profile</div>
+						<span class="chart-expand-hint">⤢ expand</span>
+					</div>
 					<div class="chart-sub">Average ΔΔG per position along the sequence — peaks highlight mutation hotspots</div>
 					<div class="chart-wrap"><canvas bind:this={canvasProfile}></canvas></div>
 				</div>
-				<div class="chart-card">
-					<div class="chart-title">Accessibility vs mutation effect</div>
+				<div class="chart-card chart-clickable" role="button" tabindex="0"
+					onclick={() => modalChart = 'scatter'}
+					onkeydown={(e) => e.key === 'Enter' && (modalChart = 'scatter')}
+				>
+					<div class="chart-card-header">
+						<div class="chart-title">Accessibility vs mutation effect</div>
+						<span class="chart-expand-hint">⤢ expand</span>
+					</div>
 					<div class="chart-sub">Core residues (low accessibility) tend to be more sensitive to mutations</div>
 					<div class="chart-wrap"><canvas bind:this={canvasScatter}></canvas></div>
 				</div>
-				<div class="chart-card">
-					<div class="chart-title">ΔΔG distribution</div>
+				<div class="chart-card chart-clickable" role="button" tabindex="0"
+					onclick={() => modalChart = 'dist'}
+					onkeydown={(e) => e.key === 'Enter' && (modalChart = 'dist')}
+				>
+					<div class="chart-card-header">
+						<div class="chart-title">ΔΔG distribution</div>
+						<span class="chart-expand-hint">⤢ expand</span>
+					</div>
 					<div class="chart-sub">Distribution of all individual mutation effects — most mutations are destabilizing</div>
 					<div class="chart-wrap"><canvas bind:this={canvasDist}></canvas></div>
 				</div>
@@ -634,6 +678,29 @@
 		</div>
 	{/if}
 </div>
+
+<!-- Chart modal -->
+{#if modalChart}
+	<div
+		class="modal-backdrop"
+		role="dialog"
+		aria-modal="true"
+		aria-label={MODAL_TITLES[modalChart]}
+		tabindex="-1"
+		onclick={(e) => e.target === e.currentTarget && (modalChart = null)}
+		onkeydown={(e) => e.key === 'Escape' && (modalChart = null)}
+	>
+		<div class="modal-box">
+			<div class="modal-header">
+				<span class="modal-title">{MODAL_TITLES[modalChart]}</span>
+				<button class="modal-close" onclick={() => (modalChart = null)} aria-label="Close">✕</button>
+			</div>
+			<div class="modal-chart-wrap">
+				<canvas bind:this={canvasModal}></canvas>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.page {
@@ -1190,6 +1257,86 @@
 		text-align: center;
 	}
 
+	/* ── Chart modal ── */
+	.modal-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 200;
+		background: rgba(0, 0, 0, 0.55);
+		backdrop-filter: blur(4px);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 2rem;
+		animation: fade-in 0.15s ease;
+	}
+
+	@keyframes fade-in {
+		from { opacity: 0; }
+		to   { opacity: 1; }
+	}
+
+	.modal-box {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 1rem;
+		width: min(900px, 100%);
+		max-height: 85vh;
+		display: flex;
+		flex-direction: column;
+		box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+		animation: slide-up 0.18s ease;
+	}
+
+	@keyframes slide-up {
+		from { transform: translateY(16px); opacity: 0; }
+		to   { transform: none; opacity: 1; }
+	}
+
+	.modal-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 1rem 1.25rem 0.75rem;
+		border-bottom: 1px solid var(--border);
+		flex-shrink: 0;
+	}
+
+	.modal-title {
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: var(--text);
+	}
+
+	.modal-close {
+		background: none;
+		border: none;
+		font-size: 1rem;
+		color: var(--text-muted);
+		cursor: pointer;
+		padding: 0.25rem 0.5rem;
+		border-radius: 0.35rem;
+		line-height: 1;
+		transition: background 0.12s, color 0.12s;
+	}
+
+	.modal-close:hover {
+		background: var(--border);
+		color: var(--text);
+	}
+
+	.modal-chart-wrap {
+		flex: 1;
+		padding: 1.25rem;
+		min-height: 0;
+		height: 520px;
+	}
+
+	.modal-chart-wrap canvas {
+		width: 100% !important;
+		height: 100% !important;
+	}
+
 	/* ── Charts ── */
 	.charts-section {
 		display: flex;
@@ -1211,6 +1358,34 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.35rem;
+	}
+
+	.chart-clickable {
+		cursor: pointer;
+		transition: border-color 0.15s, box-shadow 0.15s;
+	}
+
+	.chart-clickable:hover {
+		border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent);
+	}
+
+	.chart-clickable:hover .chart-expand-hint {
+		opacity: 1;
+	}
+
+	.chart-card-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.chart-expand-hint {
+		font-size: 0.7rem;
+		color: var(--accent);
+		opacity: 0;
+		transition: opacity 0.15s;
+		white-space: nowrap;
 	}
 
 	.chart-title {
