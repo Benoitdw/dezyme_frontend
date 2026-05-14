@@ -1,3 +1,7 @@
+<script>
+	import { base } from '$app/paths';
+</script>
+
 <footer>
 	<div class="footer-inner">
 		<div class="footer-left">
@@ -8,7 +12,7 @@
 		<div class="footer-right">
 			<span>Tel. +32 (2) 650 36 15</span>
 			<span>Fax. +32 (2) 650 35 75</span>
-			<a href="/license">Terms of use</a>
+			<a href="{base}/license">Terms of use</a>
 		</div>
 	</div>
 	<div class="footer-copy">
