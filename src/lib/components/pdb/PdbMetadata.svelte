@@ -209,4 +209,21 @@
 		display: block;
 		border-radius: 0.5rem;
 	}
+
+	@media (max-width: 640px) {
+		.meta-card {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.viewer-wrap {
+			width: 100%;
+			height: 200px;
+			order: 1;
+		}
+
+		.meta-rows {
+			order: 0;
+		}
+	}
 </style>

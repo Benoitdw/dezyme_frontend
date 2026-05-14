@@ -149,6 +149,8 @@
 		font-size: 0.75rem;
 		color: var(--text-muted);
 		text-decoration: none;
+		overflow: hidden;
+		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 
@@ -175,5 +177,29 @@
 	.copy-bib:hover {
 		color: var(--text);
 		border-color: var(--text-muted);
+	}
+
+	@media (max-width: 640px) {
+		.card {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+
+		.logo-wrap {
+			width: 72px;
+			height: 72px;
+		}
+
+		.footer {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0.5rem;
+		}
+
+		.doi {
+			white-space: normal;
+			overflow: visible;
+			text-overflow: clip;
+		}
 	}
 </style>
