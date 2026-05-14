@@ -1,0 +1,7 @@
+DATA    /home/ben/run_popmusic/MuSiC-4.1/MuSiC/Data/
+POT     /home/ben/run_popmusic/MuSiC-4.1/MuSiC/Data/energy_music/
+PDB     /home/ben/run_popmusic/out/popmusic_p53/
+CAT     /home/ben/run_popmusic/out/popmusic_p53/
+MUT     /home/ben/run_popmusic/out/popmusic_p53/
+OUTPUT  /home/ben/run_popmusic/out/popmusic_p53/
+DSSP    /tmp/
