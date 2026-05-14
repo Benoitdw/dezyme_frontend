@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { base } from '$app/paths';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { tools } from '$lib/tools';
 	import { getJobStatus } from '$lib/utils/api';
 	import { parseToolFromId } from '$lib/utils/storage';
@@ -32,11 +32,10 @@
 		if (toolId) document.body.setAttribute('data-tool', toolId);
 		poll();
 		interval = setInterval(poll, 3000);
-	});
-
-	onDestroy(() => {
-		if (interval) clearInterval(interval);
-		document.body.removeAttribute('data-tool');
+		return () => {
+			if (interval) clearInterval(interval);
+			document.body.removeAttribute('data-tool');
+		};
 	});
 
 	function copyId() {

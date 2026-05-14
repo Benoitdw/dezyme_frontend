@@ -1,8 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { base } from '$app/paths';
+	import { theme } from '$lib/stores/theme';
 	import PdbMetadata from '$lib/components/pdb/PdbMetadata.svelte';
 	import type { SummaryRow, MutationRow } from './+page.js';
+	import type { Chart as ChartType } from 'chart.js';
+
+	// Loaded client-side only to avoid SSR issues
+	let Chart = $state<typeof ChartType | null>(null);
 
 	let { data } = $props();
 
@@ -45,7 +50,14 @@
 	let _ddgMax = $state<number | null>(null);
 	let search = $state('');
 	let expanded = $state<string | null>(null);
+	let expandedFull = $state(false);
 	let sortDir = $state<1 | -1>(1);
+	let showDownload = $state(false);
+
+	// Canvas refs for charts
+	let canvasProfile = $state<HTMLCanvasElement | undefined>();
+	let canvasScatter = $state<HTMLCanvasElement | undefined>();
+	let canvasDist = $state<HTMLCanvasElement | undefined>();
 
 	type SummaryCol = 'accessibility' | 'avgDdg' | 'sumNegDdg' | 'sumPosDdg';
 	let summarySort = $state<{ col: SummaryCol; dir: 1 | -1 }>({ col: 'avgDdg', dir: 1 });
@@ -122,8 +134,199 @@
 		return `${r.chain}-${r.resNum}`;
 	}
 
+	// Collapse expanded row whenever any filter changes
+	$effect(() => {
+		void chains, structs, ddgMin, ddgMax, search;
+		expanded = null;
+		expandedFull = false;
+	});
+
+	// ── Chart helpers ────────────────────────────────────────────────
+	function ddgColor(v: number, alpha = 0.85): string {
+		if (v < -0.5) return `rgba(34,197,94,${alpha})`;
+		if (v < 0) return `rgba(134,239,172,${alpha})`;
+		if (v < 0.5) return `rgba(251,146,60,${alpha})`;
+		return `rgba(239,68,68,${alpha})`;
+	}
+
+	const SS_COLORS: Record<string, string> = {
+		H: '#8b5cf6', G: '#7c3aed', I: '#6d28d9',
+		E: '#f59e0b', B: '#d97706',
+		T: '#06b6d4', S: '#0891b2',
+		C: '#94a3b8'
+	};
+
+	function chartColors() {
+		const isDark = $theme === 'dark';
+		return {
+			text:   isDark ? '#94a3b8' : '#64748b',
+			grid:   isDark ? 'rgba(255,255,255,0.07)' : '#e2e8f0',
+			zero:   isDark ? 'rgba(255,255,255,0.2)' : '#94a3b8',
+		};
+	}
+
+	function makeProfileChart(canvas: HTMLCanvasElement, rows: SummaryRow[], C = Chart!) {
+		const c = chartColors();
+		return new C(canvas, {
+			type: 'bar',
+			data: {
+				labels: rows.map(r => `${r.chain}${r.resNum}`),
+				datasets: [{
+					data: rows.map(r => r.avgDdg),
+					backgroundColor: rows.map(r => ddgColor(r.avgDdg)),
+					borderWidth: 0,
+					barPercentage: 0.85,
+				}]
+			},
+			options: {
+				responsive: true, maintainAspectRatio: false,
+				animation: false,
+				plugins: {
+					legend: { display: false },
+					tooltip: { callbacks: {
+						label: ctx => ` ${(ctx.raw as number) > 0 ? '+' : ''}${(ctx.raw as number).toFixed(2)} kcal/mol`
+					}}
+				},
+				scales: {
+					x: {
+						ticks: { color: c.text, maxTicksLimit: 15, font: { size: 11 } },
+						grid: { display: false },
+					},
+					y: {
+						ticks: { color: c.text, font: { size: 11 } },
+						grid: { color: c.grid },
+						border: { color: c.zero },
+						title: { display: true, text: 'Avg ΔΔG (kcal/mol)', color: c.text, font: { size: 11 } }
+					}
+				}
+			}
+		});
+	}
+
+	function makeScatterChart(canvas: HTMLCanvasElement, rows: SummaryRow[], C = Chart!) {
+		const c = chartColors();
+		// Group by secondary structure for legend
+		const bySS = new Map<string, { x: number; y: number; label: string }[]>();
+		for (const r of rows) {
+			if (!bySS.has(r.secStruct)) bySS.set(r.secStruct, []);
+			bySS.get(r.secStruct)!.push({ x: r.accessibility, y: r.avgDdg, label: `${r.chain}${r.resNum} ${r.resName}` });
+		}
+		const datasets = [...bySS.entries()].map(([ss, pts]) => ({
+			label: SS_LABELS[ss] ?? ss,
+			data: pts,
+			backgroundColor: `${SS_COLORS[ss] ?? '#94a3b8'}cc`,
+			pointRadius: 5,
+			pointHoverRadius: 7,
+		}));
+		return new C(canvas, {
+			type: 'scatter',
+			data: { datasets },
+			options: {
+				responsive: true, maintainAspectRatio: false,
+				animation: false,
+				plugins: {
+					legend: { position: 'bottom', labels: { color: c.text, boxWidth: 10, font: { size: 10 } } },
+					tooltip: { callbacks: {
+						label: ctx => {
+							const pt = ctx.raw as { x: number; y: number; label: string };
+							return `${pt.label}: acc=${pt.x.toFixed(1)}% ΔΔG=${pt.y > 0 ? '+' : ''}${pt.y.toFixed(2)}`;
+						}
+					}}
+				},
+				scales: {
+					x: {
+						ticks: { color: c.text, font: { size: 11 } },
+						grid: { color: c.grid },
+						title: { display: true, text: 'Solvent accessibility (%)', color: c.text, font: { size: 11 } }
+					},
+					y: {
+						ticks: { color: c.text, font: { size: 11 } },
+						grid: { color: c.grid },
+						border: { color: c.zero },
+						title: { display: true, text: 'Avg ΔΔG (kcal/mol)', color: c.text, font: { size: 11 } }
+					}
+				}
+			}
+		});
+	}
+
+	function makeDistChart(canvas: HTMLCanvasElement, muts: MutationRow[], C = Chart!) {
+		const c = chartColors();
+		const BIN = 0.2, LO = -3, HI = 3;
+		const bins: number[] = Array(Math.round((HI - LO) / BIN)).fill(0);
+		for (const m of muts) {
+			const i = Math.floor((Math.min(Math.max(m.ddg, LO), HI - 0.001) - LO) / BIN);
+			bins[i]++;
+		}
+		const labels = bins.map((_, i) => (LO + i * BIN).toFixed(1));
+		return new C(canvas, {
+			type: 'bar',
+			data: {
+				labels,
+				datasets: [{
+					data: bins,
+					backgroundColor: labels.map(l => parseFloat(l) < 0 ? 'rgba(34,197,94,0.75)' : 'rgba(239,68,68,0.75)'),
+					borderWidth: 0,
+					barPercentage: 1.0,
+					categoryPercentage: 1.0,
+				}]
+			},
+			options: {
+				responsive: true, maintainAspectRatio: false,
+				animation: false,
+				plugins: {
+					legend: { display: false },
+					tooltip: { callbacks: {
+						title: ctx => `ΔΔG ≈ ${ctx[0].label} kcal/mol`,
+						label: ctx => ` ${ctx.raw} mutations`
+					}}
+				},
+				scales: {
+					x: {
+						ticks: { color: c.text, maxTicksLimit: 12, font: { size: 11 } },
+						grid: { display: false },
+						title: { display: true, text: 'ΔΔG (kcal/mol)', color: c.text, font: { size: 11 } }
+					},
+					y: {
+						ticks: { color: c.text, font: { size: 11 } },
+						grid: { color: c.grid },
+						title: { display: true, text: 'Mutations', color: c.text, font: { size: 11 } }
+					}
+				}
+			}
+		});
+	}
+
+	$effect(() => {
+		if (!Chart || !canvasProfile) return;
+		const rows = filteredSummary;
+		void $theme;
+		const chart = makeProfileChart(canvasProfile, rows);
+		return () => chart.destroy();
+	});
+
+	$effect(() => {
+		if (!Chart || !canvasScatter) return;
+		const rows = filteredSummary;
+		void $theme;
+		const chart = makeScatterChart(canvasScatter, rows);
+		return () => chart.destroy();
+	});
+
+	$effect(() => {
+		if (!Chart || !canvasDist) return;
+		const muts = filteredMutations;
+		void $theme;
+		const chart = makeDistChart(canvasDist, muts);
+		return () => chart.destroy();
+	});
+
 	onMount(() => {
 		document.body.setAttribute('data-tool', 'popmusic');
+		import('chart.js').then(({ Chart: C, registerables }) => {
+			C.register(...registerables);
+			Chart = C as unknown as typeof ChartType;
+		});
 		return () => document.body.removeAttribute('data-tool');
 	});
 </script>
@@ -138,7 +341,27 @@
 				<span class="page-sub">Example · PopMuSiC v3.1 · PDB 8E7B</span>
 			</div>
 		</div>
-		<a href="{base}/run?tool=popmusic" class="action-btn">Run your own analysis</a>
+		<div class="header-actions">
+			<div class="dl-wrap">
+				<button class="action-btn dl-btn" onclick={() => (showDownload = !showDownload)}>
+					↓ Download
+				</button>
+				{#if showDownload}
+					<div class="dl-menu">
+						<a href="{base}/examples/popmusic/pop_example/p53.pops" download="p53.pops" class="dl-item">
+							<span class="dl-ext">.pops</span> Position summary
+						</a>
+						<a href="{base}/examples/popmusic/pop_example/p53.pop" download="p53.pop" class="dl-item">
+							<span class="dl-ext">.pop</span> All mutations
+						</a>
+						<a href="{base}/examples/popmusic/pop_example/p53.pdb" download="p53.pdb" class="dl-item">
+							<span class="dl-ext">.pdb</span> Structure file
+						</a>
+					</div>
+				{/if}
+			</div>
+			<a href="{base}/run?tool=popmusic" class="action-btn">Run your own analysis</a>
+		</div>
 	</div>
 
 	<!-- Protein metadata card -->
@@ -223,6 +446,27 @@
 
 	<!-- Summary tab -->
 	{#if tab === 'summary'}
+		<!-- Charts section -->
+		<div class="charts-section">
+			<div class="charts-grid">
+				<div class="chart-card">
+					<div class="chart-title">Mutation sensitivity profile</div>
+					<div class="chart-sub">Average ΔΔG per position along the sequence — peaks highlight mutation hotspots</div>
+					<div class="chart-wrap"><canvas bind:this={canvasProfile}></canvas></div>
+				</div>
+				<div class="chart-card">
+					<div class="chart-title">Accessibility vs mutation effect</div>
+					<div class="chart-sub">Core residues (low accessibility) tend to be more sensitive to mutations</div>
+					<div class="chart-wrap"><canvas bind:this={canvasScatter}></canvas></div>
+				</div>
+				<div class="chart-card">
+					<div class="chart-title">ΔΔG distribution</div>
+					<div class="chart-sub">Distribution of all individual mutation effects — most mutations are destabilizing</div>
+					<div class="chart-wrap"><canvas bind:this={canvasDist}></canvas></div>
+				</div>
+			</div>
+		</div>
+
 		<div class="table-wrap">
 			<table class="data-table">
 				<thead>
@@ -290,34 +534,47 @@
 							<td class="num orange-val">{row.sumPosDdg.toFixed(2)}</td>
 						</tr>
 						{#if isOpen}
+							{@const PREVIEW = 3}
+							{@const clipped = !expandedFull && posMuts.length > PREVIEW}
 							<tr class="detail-row">
 								<td colspan="7">
 									<div class="detail-panel">
 										<div class="detail-header">
 											<strong>{row.resName} {row.chain}{row.resNum}</strong>
-											— {posMuts.length} mutations · secondary structure: {SS_LABELS[row.secStruct] ??
-												row.secStruct} · accessibility: {row.accessibility.toFixed(1)}%
+											— {posMuts.length} mutations · {SS_LABELS[row.secStruct] ?? row.secStruct} · {row.accessibility.toFixed(1)}% accessibility
 										</div>
-										<div class="bar-chart">
-											{#each posMuts as mut}
-												<div class="bar-row">
-													<span class="bar-label"
-														>{row.resName.slice(0, 1)}{row.resNum}{mut.mutRes.slice(0, 1)}</span
-													>
-													<span class="bar-mutname">{mut.mutRes}</span>
-													<div class="bar-track">
-														<div class="bar-center-line"></div>
-														<div
-															class="bar-fill {mut.ddg < 0 ? 'bar-neg' : 'bar-pos'}"
-															style="{mut.ddg < 0 ? 'right:50%' : 'left:50%'}; width:{barPct(mut.ddg)}"
-														></div>
+										<div class="bar-chart-wrap" class:clipped>
+											<div class="bar-chart">
+												{#each clipped ? posMuts.slice(0, PREVIEW + 1) : posMuts as mut}
+													<div class="bar-row">
+														<span class="bar-label"
+															>{row.resName.slice(0, 1)}{row.resNum}{mut.mutRes.slice(0, 1)}</span
+														>
+														<span class="bar-mutname">{mut.mutRes}</span>
+														<div class="bar-track">
+															<div class="bar-center-line"></div>
+															<div
+																class="bar-fill {mut.ddg < 0 ? 'bar-neg' : 'bar-pos'}"
+																style="{mut.ddg < 0 ? 'right:50%' : 'left:50%'}; width:{barPct(mut.ddg)}"
+															></div>
+														</div>
+														<span class="bar-value {ddgClass(mut.ddg)}"
+															>{mut.ddg > 0 ? '+' : ''}{mut.ddg.toFixed(2)}</span
+														>
 													</div>
-													<span class="bar-value {ddgClass(mut.ddg)}"
-														>{mut.ddg > 0 ? '+' : ''}{mut.ddg.toFixed(2)}</span
-													>
-												</div>
-											{/each}
+												{/each}
+											</div>
+											{#if clipped}<div class="fade-overlay"></div>{/if}
 										</div>
+										{#if clipped}
+											<button class="expand-all-btn" onclick={(e) => { e.stopPropagation(); expandedFull = true; }}>
+												Show all {posMuts.length} mutations
+											</button>
+										{:else if expandedFull && posMuts.length > PREVIEW}
+											<button class="expand-all-btn" onclick={(e) => { e.stopPropagation(); expandedFull = false; }}>
+												Show fewer
+											</button>
+										{/if}
 									</div>
 								</td>
 							</tr>
@@ -833,6 +1090,163 @@
 		font-size: 0.75rem;
 		font-weight: 600;
 		text-align: right;
+	}
+
+	/* ── Bar chart fade & expand ── */
+	.bar-chart-wrap {
+		position: relative;
+	}
+
+	.bar-chart-wrap.clipped {
+		max-height: calc(3 * 28px + 8px);
+		overflow: hidden;
+	}
+
+	.fade-overlay {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		height: 48px;
+		background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--accent) 3%, var(--bg)));
+		pointer-events: none;
+	}
+
+	.expand-all-btn {
+		margin-top: 0.5rem;
+		background: none;
+		border: 1px solid var(--border);
+		border-radius: 0.4rem;
+		padding: 0.3rem 0.75rem;
+		font-size: 0.78rem;
+		color: var(--accent);
+		cursor: pointer;
+		transition: background 0.12s;
+	}
+
+	.expand-all-btn:hover {
+		background: color-mix(in srgb, var(--accent) 8%, transparent);
+	}
+
+	/* ── Download dropdown ── */
+	.header-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.dl-wrap {
+		position: relative;
+	}
+
+	.dl-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+
+	.dl-menu {
+		position: absolute;
+		top: calc(100% + 0.4rem);
+		right: 0;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 0.6rem;
+		padding: 0.35rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		min-width: 180px;
+		z-index: 50;
+		box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+	}
+
+	.dl-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.4rem 0.6rem;
+		border-radius: 0.4rem;
+		font-size: 0.82rem;
+		color: var(--text);
+		text-decoration: none;
+		transition: background 0.1s;
+	}
+
+	.dl-item:hover {
+		background: color-mix(in srgb, var(--accent) 8%, transparent);
+		color: var(--accent);
+	}
+
+	.dl-ext {
+		font-family: monospace;
+		font-size: 0.72rem;
+		font-weight: 700;
+		color: var(--accent);
+		background: color-mix(in srgb, var(--accent) 12%, transparent);
+		border-radius: 0.25rem;
+		padding: 0.1rem 0.3rem;
+		min-width: 34px;
+		text-align: center;
+	}
+
+	/* ── Charts ── */
+	.charts-section {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.charts-grid {
+		display: grid;
+		grid-template-columns: 2fr 1fr 1fr;
+		gap: 1rem;
+	}
+
+	.chart-card {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 0.875rem;
+		padding: 1rem 1.25rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.chart-title {
+		font-size: 0.82rem;
+		font-weight: 600;
+		color: var(--text);
+	}
+
+	.chart-sub {
+		font-size: 0.72rem;
+		color: var(--text-muted);
+		line-height: 1.4;
+	}
+
+	.chart-wrap {
+		position: relative;
+		height: 180px;
+		margin-top: 0.5rem;
+	}
+
+	@media (max-width: 900px) {
+		.charts-grid {
+			grid-template-columns: 1fr 1fr;
+		}
+		.charts-grid .chart-card:first-child {
+			grid-column: 1 / -1;
+		}
+	}
+
+	@media (max-width: 600px) {
+		.charts-grid {
+			grid-template-columns: 1fr;
+		}
+		.charts-grid .chart-card:first-child {
+			grid-column: auto;
+		}
 	}
 
 	/* ── Empty state ── */
