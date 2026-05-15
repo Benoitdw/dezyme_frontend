@@ -50,7 +50,6 @@
 	let _ddgMax = $state<number | null>(null);
 	let search = $state('');
 	let expanded = $state<string | null>(null);
-	let expandedFull = $state(false);
 	let sortDir = $state<1 | -1>(1);
 	let showDownload = $state(false);
 
@@ -149,7 +148,6 @@
 	$effect(() => {
 		void chains, structs, ddgMin, ddgMax, search;
 		expanded = null;
-		expandedFull = false;
 	});
 
 	// ── Chart helpers ────────────────────────────────────────────────
@@ -578,8 +576,6 @@
 							<td class="num orange-val">{row.sumPosDdg.toFixed(2)}</td>
 						</tr>
 						{#if isOpen}
-							{@const PREVIEW = 3}
-							{@const clipped = !expandedFull && posMuts.length > PREVIEW}
 							<tr class="detail-row">
 								<td colspan="7">
 									<div class="detail-panel">
@@ -587,9 +583,9 @@
 											<strong>{row.resName} {row.chain}{row.resNum}</strong>
 											— {posMuts.length} mutations · {SS_LABELS[row.secStruct] ?? row.secStruct} · {row.accessibility.toFixed(1)}% accessibility
 										</div>
-										<div class="bar-chart-wrap" class:clipped>
+										<div class="bar-chart-wrap">
 											<div class="bar-chart">
-												{#each clipped ? posMuts.slice(0, PREVIEW + 1) : posMuts as mut}
+												{#each posMuts as mut}
 													<div class="bar-row">
 														<span class="bar-label"
 															>{row.resName.slice(0, 1)}{row.resNum}{mut.mutRes.slice(0, 1)}</span
@@ -608,17 +604,7 @@
 													</div>
 												{/each}
 											</div>
-											{#if clipped}<div class="fade-overlay"></div>{/if}
 										</div>
-										{#if clipped}
-											<button class="expand-all-btn" onclick={(e) => { e.stopPropagation(); expandedFull = true; }}>
-												Show all {posMuts.length} mutations
-											</button>
-										{:else if expandedFull && posMuts.length > PREVIEW}
-											<button class="expand-all-btn" onclick={(e) => { e.stopPropagation(); expandedFull = false; }}>
-												Show fewer
-											</button>
-										{/if}
 									</div>
 								</td>
 							</tr>
@@ -1159,24 +1145,9 @@
 		text-align: right;
 	}
 
-	/* ── Bar chart fade & expand ── */
+	/* ── Bar chart ── */
 	.bar-chart-wrap {
 		position: relative;
-	}
-
-	.bar-chart-wrap.clipped {
-		max-height: calc(3 * 28px + 8px);
-		overflow: hidden;
-	}
-
-	.fade-overlay {
-		position: absolute;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		height: 48px;
-		background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--accent) 3%, var(--bg)));
-		pointer-events: none;
 	}
 
 	.expand-all-btn {
