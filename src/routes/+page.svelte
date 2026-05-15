@@ -272,11 +272,14 @@
 		<ul class="tool-list">
 			{#each toolList as tool}
 				<li>
-					<a href="{base}/run?tool={tool.id}" class="tool-item">
+					<a href="{base}/run?tool={tool.id}" class="tool-item" class:tool-coming={tool.comingSoon}>
 						<div class="tool-accent-bar" style="background:{tool.accent}"></div>
 						<div class="tool-body">
 							<div class="tool-top">
 								<span class="tool-name" style="color:{tool.accent}">{tool.name}</span>
+								{#if tool.comingSoon}
+									<span class="tool-badge">Coming soon</span>
+								{/if}
 								{#if tool.tags}
 									<div class="tool-tags">
 										{#each tool.tags.slice(0, 2) as tag}
@@ -287,7 +290,7 @@
 							</div>
 							<p class="tool-desc">{tool.tagline}</p>
 						</div>
-						<span class="tool-arrow">Run →</span>
+						<span class="tool-arrow">{tool.comingSoon ? 'Preview →' : 'Run →'}</span>
 					</a>
 				</li>
 			{/each}
@@ -838,6 +841,22 @@
 
 	.tool-name  { font-size: 1rem; font-weight: 700; }
 	.tool-tags  { display: flex; gap: 0.4rem; }
+
+	.tool-coming {
+		opacity: 0.8;
+	}
+
+	.tool-badge {
+		font-size: 0.65rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--text-muted);
+		background: color-mix(in srgb, var(--text-muted) 12%, transparent);
+		border: 1px solid color-mix(in srgb, var(--text-muted) 22%, transparent);
+		border-radius: 0.25rem;
+		padding: 0.1rem 0.5rem;
+	}
 
 	.tool-tag {
 		font-size: 0.7rem;

@@ -1,4 +1,4 @@
-export type ToolId = 'popmusic' | 'hotmusic' | 'snpmusic';
+export type ToolId = 'popmusic' | 'hotmusic' | 'snpmusic' | 'beatmusic' | 'soulmusic';
 
 export interface ChainRule {
 	preselect: (chains: string[]) => string[];
@@ -33,4 +33,6 @@ export interface ToolConfig {
 	doi?: string;
 	bibTeX?: string;
 	logoPath?: string;
+	comingSoon?: boolean;
+	legacyUrl?: string;
 }

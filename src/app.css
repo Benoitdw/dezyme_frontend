@@ -115,30 +115,36 @@ body[data-tool='beatmusic']::before {
 @property --sy2 { syntax: '<percentage>'; initial-value: 18%; inherits: false; }
 @property --sx3 { syntax: '<percentage>'; initial-value: 55%; inherits: false; }
 @property --sy3 { syntax: '<percentage>'; initial-value: 52%; inherits: false; }
+@property --sx4 { syntax: '<percentage>'; initial-value: 10%; inherits: false; }
+@property --sy4 { syntax: '<percentage>'; initial-value: 35%; inherits: false; }
+@property --sx5 { syntax: '<percentage>'; initial-value: 88%; inherits: false; }
+@property --sy5 { syntax: '<percentage>'; initial-value: 75%; inherits: false; }
+@property --sx6 { syntax: '<percentage>'; initial-value: 45%; inherits: false; }
+@property --sy6 { syntax: '<percentage>'; initial-value: 20%; inherits: false; }
 
 body[data-tool='soulmusic']::before {
 	background-image:
-		/* Wisp 1 — dense ground mist, warm cream */
-		radial-gradient(ellipse 65% 38% at var(--sx1) var(--sy1),
-			rgba(255, 244, 210, 0.88) 0%,
-			rgba(252, 237, 188, 0.38) 40%,
-			transparent 70%),
-		/* Wisp 2 — amber backlight, upper haze */
-		radial-gradient(ellipse 82% 58% at var(--sx2) var(--sy2),
-			rgba(196, 140, 52, 0.22) 0%,
-			transparent 65%),
-		/* Wisp 3 — secondary mist bank */
-		radial-gradient(ellipse 50% 30% at var(--sx3) var(--sy3),
-			rgba(243, 227, 182, 0.72) 0%,
-			rgba(246, 232, 190, 0.28) 45%,
-			transparent 68%),
-		/* Warm sepia base */
-		linear-gradient(165deg, #f6e9c8, #efdebb, #f3e5c2, #eadaae, #f1e3be);
+		radial-gradient(ellipse 44% 28% at var(--sx1) var(--sy1),
+			rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.50) 32%, transparent 65%),
+		radial-gradient(ellipse 70% 48% at var(--sx2) var(--sy2),
+			rgba(210, 218, 245, 0.68) 0%, rgba(195, 205, 238, 0.28) 40%, transparent 68%),
+		radial-gradient(ellipse 36% 22% at var(--sx3) var(--sy3),
+			rgba(255, 255, 255, 0.88) 0%, rgba(245, 248, 255, 0.42) 36%, transparent 66%),
+		radial-gradient(ellipse 30% 18% at var(--sx4) var(--sy4),
+			rgba(255, 255, 255, 0.80) 0%, rgba(240, 244, 255, 0.35) 38%, transparent 64%),
+		radial-gradient(ellipse 52% 32% at var(--sx5) var(--sy5),
+			rgba(220, 226, 248, 0.72) 0%, rgba(210, 218, 244, 0.32) 42%, transparent 68%),
+		radial-gradient(ellipse 28% 16% at var(--sx6) var(--sy6),
+			rgba(255, 255, 255, 0.85) 0%, rgba(248, 250, 255, 0.38) 34%, transparent 62%),
+		linear-gradient(165deg, #c2c9e4, #bac2de, #c6cde6, #bec6e2, #c2c9e4);
 	background-size: 100% 100%;
 	animation:
 		soul-wisp1 19s ease-in-out infinite,
 		soul-wisp2 27s ease-in-out infinite,
 		soul-wisp3 14s ease-in-out infinite,
+		soul-wisp4 23s ease-in-out infinite,
+		soul-wisp5 31s ease-in-out infinite,
+		soul-wisp6 17s ease-in-out infinite,
 		soul-base  13s ease-in-out infinite;
 }
 
@@ -149,7 +155,6 @@ body[data-tool='soulmusic']::before {
 	80%  { --sx1: 14%; --sy1: 59%; }
 	100% { --sx1: 22%; --sy1: 72%; }
 }
-
 @keyframes soul-wisp2 {
 	0%   { --sx2: 78%; --sy2: 18%; }
 	22%  { --sx2: 28%; --sy2: 34%; }
@@ -157,17 +162,35 @@ body[data-tool='soulmusic']::before {
 	80%  { --sx2: 85%; --sy2: 46%; }
 	100% { --sx2: 78%; --sy2: 18%; }
 }
-
 @keyframes soul-wisp3 {
 	0%   { --sx3: 55%; --sy3: 52%; }
 	35%  { --sx3: 18%; --sy3: 40%; }
 	70%  { --sx3: 80%; --sy3: 63%; }
 	100% { --sx3: 55%; --sy3: 52%; }
 }
-
+@keyframes soul-wisp4 {
+	0%   { --sx4: 10%; --sy4: 35%; }
+	30%  { --sx4: 50%; --sy4: 20%; }
+	60%  { --sx4: 82%; --sy4: 42%; }
+	85%  { --sx4: 38%; --sy4: 68%; }
+	100% { --sx4: 10%; --sy4: 35%; }
+}
+@keyframes soul-wisp5 {
+	0%   { --sx5: 88%; --sy5: 75%; }
+	25%  { --sx5: 60%; --sy5: 55%; }
+	50%  { --sx5: 25%; --sy5: 80%; }
+	75%  { --sx5: 72%; --sy5: 30%; }
+	100% { --sx5: 88%; --sy5: 75%; }
+}
+@keyframes soul-wisp6 {
+	0%   { --sx6: 45%; --sy6: 20%; }
+	40%  { --sx6: 90%; --sy6: 48%; }
+	75%  { --sx6: 15%; --sy6: 60%; }
+	100% { --sx6: 45%; --sy6: 20%; }
+}
 @keyframes soul-base {
-	0%, 100% { background-position: 0 0, 0 0, 0 0, 0%   50%; }
-	50%       { background-position: 0 0, 0 0, 0 0, 100% 50%; }
+	0%, 100% { background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0%   50%; }
+	50%       { background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 100% 50%; }
 }
 
 /* Dark mode variants — thematic dark palette per tool */
@@ -231,29 +254,26 @@ body[data-tool='soulmusic']::before {
 }
 
 :root[data-theme='dark'] body[data-tool='soulmusic'] {
-	--bg:      #0e0b04;
-	--surface: #161007;
-	--border:  rgba(160, 120, 60, 0.18);
+	--bg:      #080e0b;
+	--surface: #0e1612;
+	--border:  rgba(91, 122, 106, 0.18);
 }
 
 :root[data-theme='dark'] body[data-tool='soulmusic']::before {
 	background-image:
-		/* Wisp 1 — spectral ground mist, ghostly amber */
-		radial-gradient(ellipse 65% 38% at var(--sx1) var(--sy1),
-			rgba(200, 165, 90, 0.18) 0%,
-			rgba(180, 145, 70, 0.08) 40%,
-			transparent 70%),
-		/* Wisp 2 — upper amber spectral haze */
-		radial-gradient(ellipse 82% 58% at var(--sx2) var(--sy2),
-			rgba(150, 105, 35, 0.16) 0%,
-			transparent 65%),
-		/* Wisp 3 — secondary ghost wisp */
-		radial-gradient(ellipse 50% 30% at var(--sx3) var(--sy3),
-			rgba(185, 152, 80, 0.14) 0%,
-			rgba(165, 132, 60, 0.06) 45%,
-			transparent 68%),
-		/* Deep swamp darkness */
-		linear-gradient(165deg, #0e0b04, #160f06, #120d05, #180f07, #0e0b04);
+		radial-gradient(ellipse 44% 28% at var(--sx1) var(--sy1),
+			rgba(91, 122, 106, 0.22) 0%, rgba(75, 100, 88, 0.10) 32%, transparent 65%),
+		radial-gradient(ellipse 70% 48% at var(--sx2) var(--sy2),
+			rgba(107, 140, 120, 0.16) 0%, rgba(90, 120, 105, 0.07) 40%, transparent 68%),
+		radial-gradient(ellipse 36% 22% at var(--sx3) var(--sy3),
+			rgba(80, 110, 95, 0.20) 0%, rgba(65, 90, 78, 0.08) 36%, transparent 66%),
+		radial-gradient(ellipse 30% 18% at var(--sx4) var(--sy4),
+			rgba(95, 128, 112, 0.18) 0%, rgba(75, 102, 89, 0.07) 38%, transparent 64%),
+		radial-gradient(ellipse 52% 32% at var(--sx5) var(--sy5),
+			rgba(70, 95, 82, 0.15) 0%, rgba(55, 76, 66, 0.06) 42%, transparent 68%),
+		radial-gradient(ellipse 28% 16% at var(--sx6) var(--sy6),
+			rgba(100, 134, 116, 0.19) 0%, rgba(82, 110, 96, 0.07) 34%, transparent 62%),
+		linear-gradient(160deg, #080e0b, #0d1510, #080e0b, #0b130e, #0d1510, #080e0b);
 	background-size: 100% 100%;
 	animation:
 		soul-wisp1 19s ease-in-out infinite,
