@@ -6,6 +6,7 @@
 	import { getJobStatus } from '$lib/utils/api';
 	import { parseToolFromId } from '$lib/utils/storage';
 	import type { JobStatus } from '$lib/utils/api';
+	import ProteinPending from '$lib/components/ProteinPending.svelte';
 
 	const analysisId = $page.params.id ?? '';
 	const toolId = parseToolFromId(analysisId);
@@ -70,13 +71,7 @@
 			</div>
 		</div>
 	{:else}
-		<div class="status-block">
-			<span class="spinner" aria-hidden="true"></span>
-			<div>
-				<div class="status-text">{status === 'running' ? 'Running...' : 'Pending...'}</div>
-				<div class="status-sub">This page will update automatically</div>
-			</div>
-		</div>
+		<ProteinPending label={status === 'running' ? 'Running…' : 'Pending…'} />
 	{/if}
 </div>
 
@@ -170,20 +165,6 @@
 		font-size: 0.85rem;
 		color: var(--text-muted);
 		margin-top: 0.2rem;
-	}
-
-	@keyframes spin {
-		to { transform: rotate(360deg); }
-	}
-
-	.spinner {
-		width: 1.5rem;
-		height: 1.5rem;
-		border: 2px solid var(--border);
-		border-top-color: var(--text-muted);
-		border-radius: 50%;
-		animation: spin 0.8s linear infinite;
-		flex-shrink: 0;
 	}
 
 	.results-area {

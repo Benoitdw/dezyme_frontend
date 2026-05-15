@@ -113,95 +113,112 @@
 	<div class="form-card">
 		<SoftIdCard {tool} />
 
-		<section class="section">
-			<label class="section-label">Structure</label>
-			<PdbInput onLoaded={onPdbLoaded} onError={onPdbError} />
-			{#if pdbError}
-				<p class="error">{pdbError}</p>
+		{#if tool.comingSoon}
+			<div class="coming-soon" style="--c: {tool.accent}">
+				<span class="coming-soon-icon">🚧</span>
+				<div class="coming-soon-body">
+					<p class="coming-soon-title">Not yet available on this platform</p>
+					{#if tool.legacyUrl}
+						<p class="coming-soon-hint">
+							You can still use the previous version at
+							<a href={tool.legacyUrl} target="_blank" rel="noopener noreferrer" class="coming-soon-link">{tool.legacyUrl}</a>
+						</p>
+					{:else}
+						<p class="coming-soon-hint">This tool will be available in an upcoming release.</p>
+					{/if}
+				</div>
+			</div>
+		{:else}
+			<section class="section">
+				<label class="section-label">Structure</label>
+				<PdbInput onLoaded={onPdbLoaded} onError={onPdbError} />
+				{#if pdbError}
+					<p class="error">{pdbError}</p>
+				{/if}
+			</section>
+
+			{#if pdbMeta}
+				<section class="section">
+					<label class="section-label">Metadata</label>
+					<PdbMetadata meta={pdbMeta} {selectedChains} accent={tool.accent} />
+				</section>
+
+				<section class="section">
+					<label class="section-label">Chain selection</label>
+					<ChainSelector
+						chains={pdbMeta.chains}
+						chainRule={tool.chainRule}
+						bind:selected={selectedChains}
+						onChange={(s) => (selectedChains = s)}
+					/>
+				</section>
 			{/if}
-		</section>
 
-		{#if pdbMeta}
-			<section class="section">
-				<label class="section-label">Metadata</label>
-				<PdbMetadata meta={pdbMeta} {selectedChains} accent={tool.accent} />
-			</section>
-
-			<section class="section">
-				<label class="section-label">Chain selection</label>
-				<ChainSelector
-					chains={pdbMeta.chains}
-					chainRule={tool.chainRule}
-					bind:selected={selectedChains}
-					onChange={(s) => (selectedChains = s)}
-				/>
-			</section>
-		{/if}
-
-		{#if tool.fields.length > 0}
-			<section class="section">
-				<label class="section-label">Parameters</label>
-				<div class="fields">
-					{#each tool.fields as field}
-						{@const val = fieldValues[field.name] ?? ''}
-						{@const err = fieldErrors[field.name] ?? ''}
-						<div class="field">
-							<label class="field-label" for={field.name}>{field.label}</label>
-							<div class="field-input-row">
-								<input
-									id={field.name}
-									type="number"
-									min={field.min}
-									max={field.max}
-									step={field.step ?? 'any'}
-									placeholder={field.placeholder ?? ''}
-									value={val}
-									oninput={(e) => setField(field.name, (e.target as HTMLInputElement).value)}
-									class="field-input"
-									class:invalid={err !== ''}
-								/>
-								{#if field.unit}
-									<span class="field-unit">{field.unit}</span>
-								{/if}
-								{#if val !== ''}
-									<button
-										type="button"
-										class="field-clear"
-										onclick={() => setField(field.name, '')}
-										aria-label="Reset to unknown"
-									>×</button>
+			{#if tool.fields.length > 0}
+				<section class="section">
+					<label class="section-label">Parameters</label>
+					<div class="fields">
+						{#each tool.fields as field}
+							{@const val = fieldValues[field.name] ?? ''}
+							{@const err = fieldErrors[field.name] ?? ''}
+							<div class="field">
+								<label class="field-label" for={field.name}>{field.label}</label>
+								<div class="field-input-row">
+									<input
+										id={field.name}
+										type="number"
+										min={field.min}
+										max={field.max}
+										step={field.step ?? 'any'}
+										placeholder={field.placeholder ?? ''}
+										value={val}
+										oninput={(e) => setField(field.name, (e.target as HTMLInputElement).value)}
+										class="field-input"
+										class:invalid={err !== ''}
+									/>
+									{#if field.unit}
+										<span class="field-unit">{field.unit}</span>
+									{/if}
+									{#if val !== ''}
+										<button
+											type="button"
+											class="field-clear"
+											onclick={() => setField(field.name, '')}
+											aria-label="Reset to unknown"
+										>×</button>
+									{/if}
+								</div>
+								{#if err !== ''}
+									<p class="field-error">{err}</p>
+								{:else if field.hint}
+									<p class="field-hint">{field.hint}</p>
 								{/if}
 							</div>
-							{#if err !== ''}
-								<p class="field-error">{err}</p>
-							{:else if field.hint}
-								<p class="field-hint">{field.hint}</p>
-							{/if}
-						</div>
-					{/each}
-				</div>
-			</section>
-		{/if}
+						{/each}
+					</div>
+				</section>
+			{/if}
 
-		{#if tool.mutationList && pdbMeta}
-			<section class="section">
-				<span class="section-label">Mutations</span>
-				<MutationList
-					residues={pdbMeta.residues}
-					onchange={(m) => (mutations = m)}
-				/>
-			</section>
-		{/if}
+			{#if tool.mutationList && pdbMeta}
+				<section class="section">
+					<span class="section-label">Mutations</span>
+					<MutationList
+						residues={pdbMeta.residues}
+						onchange={(m) => (mutations = m)}
+					/>
+				</section>
+			{/if}
 
-		<button
-			class="submit-btn"
-			style="--accent: {tool.accent}"
-			onclick={handleSubmit}
-			disabled={!pdbMeta || selectedChains.length === 0 || submitting || hasFieldErrors}
-			type="button"
-		>
-			{submitting ? 'Submitting...' : `Run ${tool.name}`}
-		</button>
+			<button
+				class="submit-btn"
+				style="--accent: {tool.accent}"
+				onclick={handleSubmit}
+				disabled={!pdbMeta || selectedChains.length === 0 || submitting || hasFieldErrors}
+				type="button"
+			>
+				{submitting ? 'Submitting...' : `Run ${tool.name}`}
+			</button>
+		{/if}
 	</div>
 </div>
 
@@ -268,6 +285,103 @@
 
 	.page[data-tool='snpmusic'] :global(.submit-btn) {
 		background: linear-gradient(135deg, #059669, #0284c7);
+	}
+
+	/* ── beatmusic — cardiac rhythm / EKG ──────────────────────── */
+
+	.page[data-tool='beatmusic'] :global(.form-card) {
+		border-color: rgba(225, 29, 72, 0.25);
+		animation: heartbeat-glow 1.6s ease-in-out infinite;
+	}
+
+	/* lub … dub … rest */
+	@keyframes heartbeat-glow {
+		0%,  100% { box-shadow: 0 0 18px rgba(225, 29, 72, 0.07), 0 0 56px rgba(225, 29, 72, 0.03); }
+		15%        { box-shadow: 0 0 36px rgba(225, 29, 72, 0.28), 0 0 80px rgba(225, 29, 72, 0.10); }
+		30%        { box-shadow: 0 0 18px rgba(225, 29, 72, 0.09), 0 0 56px rgba(225, 29, 72, 0.04); }
+		45%        { box-shadow: 0 0 48px rgba(225, 29, 72, 0.34), 0 0 100px rgba(225, 29, 72, 0.14); }
+		65%        { box-shadow: 0 0 18px rgba(225, 29, 72, 0.07), 0 0 56px rgba(225, 29, 72, 0.03); }
+	}
+
+	.page[data-tool='beatmusic'] :global(.section-label) {
+		color: #be123c;
+		font-family: 'Courier New', Courier, monospace;
+		letter-spacing: 0.07em;
+	}
+
+	.page[data-tool='beatmusic'] :global(.submit-btn) {
+		background: linear-gradient(135deg, #e11d48, #be123c);
+	}
+
+	/* ── soulmusic — golden mist / spectral swamp ───────────────── */
+
+	.page[data-tool='soulmusic'] :global(.form-card) {
+		border-color: rgba(160, 120, 55, 0.30);
+		animation: wisp-glow 11s ease-in-out infinite;
+	}
+
+	/* Three uneven peaks — feels like a will-o'-wisp, not a metronome */
+	@keyframes wisp-glow {
+		0%   { box-shadow: 0 0 28px rgba(160, 120, 50, 0.06), 0 0 70px rgba(160, 120, 50, 0.03); }
+		12%  { box-shadow: 0 0 55px rgba(160, 120, 50, 0.16), 0 0 110px rgba(160, 120, 50, 0.07); }
+		25%  { box-shadow: 0 0 22px rgba(160, 120, 50, 0.04), 0 0 55px rgba(160, 120, 50, 0.02); }
+		48%  { box-shadow: 0 0 72px rgba(160, 120, 50, 0.22), 0 0 140px rgba(160, 120, 50, 0.10); }
+		65%  { box-shadow: 0 0 18px rgba(160, 120, 50, 0.04), 0 0 48px rgba(160, 120, 50, 0.02); }
+		79%  { box-shadow: 0 0 40px rgba(160, 120, 50, 0.10), 0 0 88px rgba(160, 120, 50, 0.05); }
+		100% { box-shadow: 0 0 28px rgba(160, 120, 50, 0.06), 0 0 70px rgba(160, 120, 50, 0.03); }
+	}
+
+	.page[data-tool='soulmusic'] :global(.section-label) {
+		color: #8a6030;
+	}
+
+	.page[data-tool='soulmusic'] :global(.submit-btn) {
+		background: linear-gradient(135deg, #8a6030, #a07840);
+	}
+
+	/* ── Coming soon panel ──────────────────────────────────────── */
+
+	.coming-soon {
+		display: flex;
+		align-items: flex-start;
+		gap: 1rem;
+		background: color-mix(in srgb, var(--c) 6%, var(--bg));
+		border: 1px solid color-mix(in srgb, var(--c) 25%, transparent);
+		border-radius: 0.75rem;
+		padding: 1.25rem 1.5rem;
+	}
+
+	.coming-soon-icon {
+		font-size: 1.5rem;
+		line-height: 1;
+		flex-shrink: 0;
+	}
+
+	.coming-soon-body {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+
+	.coming-soon-title {
+		font-size: 0.95rem;
+		font-weight: 700;
+		color: var(--text);
+	}
+
+	.coming-soon-hint {
+		font-size: 0.85rem;
+		color: var(--text-muted);
+		line-height: 1.55;
+	}
+
+	.coming-soon-link {
+		color: var(--c);
+		word-break: break-all;
+	}
+
+	.coming-soon-link:hover {
+		text-decoration: underline;
 	}
 
 	.tool-tabs {
