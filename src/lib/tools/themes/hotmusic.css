@@ -1,0 +1,26 @@
+/* HoTMuSiC — fire & heat */
+
+body[data-tool='hotmusic']::before {
+	background: linear-gradient(145deg, #fff7ed, #fef3c7, #fff0e6, #fff7ed);
+	background-size: 300% 300%;
+	animation: hot-shift 8s ease-in-out infinite;
+}
+
+@keyframes hot-shift {
+	0%, 100% { background-position: 0% 50%; }
+	50%       { background-position: 100% 50%; }
+}
+
+:root[data-theme='dark'] body[data-tool='hotmusic'] {
+	--bg:      #130d07;
+	--surface: #1e1309;
+	--border:  rgba(251, 113, 30, 0.2);
+}
+
+:root[data-theme='dark'] body[data-tool='hotmusic']::before {
+	background:
+		radial-gradient(ellipse at 50% 40%, rgba(251, 113, 30, 0.12) 0%, transparent 60%),
+		linear-gradient(145deg, #130d07, #1c1008);
+	background-size: 300% 300%;
+	animation: hot-shift 8s ease-in-out infinite;
+}

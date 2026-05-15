@@ -1,0 +1,31 @@
+/* SNPMuSiC — mutations & genomics */
+
+body[data-tool='snpmusic']::before {
+	background-image:
+		repeating-linear-gradient(0deg,  rgba(16, 185, 129, 0.07) 0px, transparent 1px, transparent 28px),
+		repeating-linear-gradient(90deg, rgba(16, 185, 129, 0.07) 0px, transparent 1px, transparent 28px),
+		linear-gradient(135deg, #f0fdf4, #ecfdf5, #f0fdfa, #d1fae5, #ecfdf5, #f0fdf4);
+	background-size: 100% 100%, 100% 100%, 400% 400%;
+	animation: snp-shift 12s ease-in-out infinite;
+}
+
+@keyframes snp-shift {
+	0%   { background-position: 0 0, 0 0, 0%   50%; }
+	50%  { background-position: 0 0, 0 0, 100% 50%; }
+	100% { background-position: 0 0, 0 0, 0%   50%; }
+}
+
+:root[data-theme='dark'] body[data-tool='snpmusic'] {
+	--bg:      #07100c;
+	--surface: #0d1a12;
+	--border:  rgba(16, 185, 129, 0.2);
+}
+
+:root[data-theme='dark'] body[data-tool='snpmusic']::before {
+	background-image:
+		repeating-linear-gradient(0deg,  rgba(16, 185, 129, 0.06) 0px, transparent 1px, transparent 28px),
+		repeating-linear-gradient(90deg, rgba(16, 185, 129, 0.06) 0px, transparent 1px, transparent 28px),
+		linear-gradient(135deg, #07100c, #0b180e, #07100c, #091510, #0b180e, #07100c);
+	background-size: 100% 100%, 100% 100%, 400% 400%;
+	animation: snp-shift 12s ease-in-out infinite;
+}

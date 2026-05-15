@@ -1,6 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
+/* ── Tool themes ── one file per tool, edit there */
+@import "./lib/tools/themes/hotmusic.css";
+@import "./lib/tools/themes/popmusic.css";
+@import "./lib/tools/themes/snpmusic.css";
+@import "./lib/tools/themes/beatmusic.css";
+@import "./lib/tools/themes/soulmusic.css";
+
+/* ── Global tokens ──────────────────────────────────────────────── */
+
 :root {
 	--primary: #1a365d;
 	--accent: #2563eb;
@@ -21,6 +30,8 @@
 	--text-muted: #64748b;
 }
 
+/* ── Base ───────────────────────────────────────────────────────── */
+
 body {
 	font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 	background-color: var(--bg);
@@ -30,9 +41,7 @@ body {
 	font-size: 16px;
 }
 
-/* ── Tool themes ────────────────────────────────────────────────── */
-
-/* Full-screen background layer — only this fades, content stays put */
+/* Full-screen background layer shared by all tool themes */
 body::before {
 	content: '';
 	position: fixed;
@@ -45,239 +54,4 @@ body::before {
 
 body.tool-transitioning::before {
 	opacity: 0;
-}
-
-/* hotmusic — fire & heat */
-body[data-tool='hotmusic']::before {
-	background: linear-gradient(145deg, #fff7ed, #fef3c7, #fff0e6, #fff7ed);
-	background-size: 300% 300%;
-	animation: hot-shift 8s ease-in-out infinite;
-}
-
-@keyframes hot-shift {
-	0%, 100% { background-position: 0% 50%; }
-	50%       { background-position: 100% 50%; }
-}
-
-/* popmusic — bubbly & vivid */
-body[data-tool='popmusic']::before {
-	background-image:
-		radial-gradient(circle, rgba(236, 72, 153, 0.07) 1.5px, transparent 1.5px),
-		linear-gradient(135deg, #fdf2f8, #fce7f3, #f0f9ff, #fdf4ff, #fce7f3, #fdf2f8);
-	background-size: 22px 22px, 400% 400%;
-	animation: pop-shift 10s ease-in-out infinite;
-}
-
-@keyframes pop-shift {
-	0%        { background-position: 0 0, 0% 50%; }
-	33%       { background-position: 0 0, 60% 30%; }
-	66%       { background-position: 0 0, 30% 80%; }
-	100%      { background-position: 0 0, 0% 50%; }
-}
-
-/* snpmusic — mutations & genomics */
-body[data-tool='snpmusic']::before {
-	background-image:
-		repeating-linear-gradient(0deg,  rgba(16, 185, 129, 0.07) 0px, transparent 1px, transparent 28px),
-		repeating-linear-gradient(90deg, rgba(16, 185, 129, 0.07) 0px, transparent 1px, transparent 28px),
-		linear-gradient(135deg, #f0fdf4, #ecfdf5, #f0fdfa, #d1fae5, #ecfdf5, #f0fdf4);
-	background-size: 100% 100%, 100% 100%, 400% 400%;
-	animation: snp-shift 12s ease-in-out infinite;
-}
-
-@keyframes snp-shift {
-	0%   { background-position: 0 0, 0 0, 0% 50%; }
-	50%  { background-position: 0 0, 0 0, 100% 50%; }
-	100% { background-position: 0 0, 0 0, 0% 50%; }
-}
-
-/* beatmusic — cardiac rhythm / EKG monitor */
-body[data-tool='beatmusic']::before {
-	background-image:
-		repeating-linear-gradient(0deg,  rgba(225, 29, 72, 0.045) 0px, transparent 1px, transparent 32px),
-		repeating-linear-gradient(90deg, rgba(225, 29, 72, 0.045) 0px, transparent 1px, transparent 32px),
-		radial-gradient(ellipse 70% 45% at 50% 50%, rgba(225, 29, 72, 0.07) 0%, transparent 60%),
-		linear-gradient(135deg, #fff1f2, #ffe4e6, #fff8f8, #ffe4e6, #fff1f2);
-	background-size: 100% 100%, 100% 100%, 100% 100%, 400% 400%;
-	animation: heart-bg 9s ease-in-out infinite;
-}
-
-@keyframes heart-bg {
-	0%, 100% { background-position: 0 0, 0 0, 50% 50%, 0% 50%; }
-	50%       { background-position: 0 0, 0 0, 50% 50%, 100% 50%; }
-}
-
-/* soulmusic — golden mist / spectral swamp
-   Each wisp drifts on its own schedule via @property-animated coordinates */
-@property --sx1 { syntax: '<percentage>'; initial-value: 22%; inherits: false; }
-@property --sy1 { syntax: '<percentage>'; initial-value: 72%; inherits: false; }
-@property --sx2 { syntax: '<percentage>'; initial-value: 78%; inherits: false; }
-@property --sy2 { syntax: '<percentage>'; initial-value: 18%; inherits: false; }
-@property --sx3 { syntax: '<percentage>'; initial-value: 55%; inherits: false; }
-@property --sy3 { syntax: '<percentage>'; initial-value: 52%; inherits: false; }
-@property --sx4 { syntax: '<percentage>'; initial-value: 10%; inherits: false; }
-@property --sy4 { syntax: '<percentage>'; initial-value: 35%; inherits: false; }
-@property --sx5 { syntax: '<percentage>'; initial-value: 88%; inherits: false; }
-@property --sy5 { syntax: '<percentage>'; initial-value: 75%; inherits: false; }
-@property --sx6 { syntax: '<percentage>'; initial-value: 45%; inherits: false; }
-@property --sy6 { syntax: '<percentage>'; initial-value: 20%; inherits: false; }
-
-body[data-tool='soulmusic']::before {
-	background-image:
-		radial-gradient(ellipse 44% 28% at var(--sx1) var(--sy1),
-			rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.50) 32%, transparent 65%),
-		radial-gradient(ellipse 70% 48% at var(--sx2) var(--sy2),
-			rgba(210, 218, 245, 0.68) 0%, rgba(195, 205, 238, 0.28) 40%, transparent 68%),
-		radial-gradient(ellipse 36% 22% at var(--sx3) var(--sy3),
-			rgba(255, 255, 255, 0.88) 0%, rgba(245, 248, 255, 0.42) 36%, transparent 66%),
-		radial-gradient(ellipse 30% 18% at var(--sx4) var(--sy4),
-			rgba(255, 255, 255, 0.80) 0%, rgba(240, 244, 255, 0.35) 38%, transparent 64%),
-		radial-gradient(ellipse 52% 32% at var(--sx5) var(--sy5),
-			rgba(220, 226, 248, 0.72) 0%, rgba(210, 218, 244, 0.32) 42%, transparent 68%),
-		radial-gradient(ellipse 28% 16% at var(--sx6) var(--sy6),
-			rgba(255, 255, 255, 0.85) 0%, rgba(248, 250, 255, 0.38) 34%, transparent 62%),
-		linear-gradient(165deg, #c2c9e4, #bac2de, #c6cde6, #bec6e2, #c2c9e4);
-	background-size: 100% 100%;
-	animation:
-		soul-wisp1 19s ease-in-out infinite,
-		soul-wisp2 27s ease-in-out infinite,
-		soul-wisp3 14s ease-in-out infinite,
-		soul-wisp4 23s ease-in-out infinite,
-		soul-wisp5 31s ease-in-out infinite,
-		soul-wisp6 17s ease-in-out infinite,
-		soul-base  13s ease-in-out infinite;
-}
-
-@keyframes soul-wisp1 {
-	0%   { --sx1: 22%; --sy1: 72%; }
-	28%  { --sx1: 68%; --sy1: 64%; }
-	55%  { --sx1: 44%; --sy1: 81%; }
-	80%  { --sx1: 14%; --sy1: 59%; }
-	100% { --sx1: 22%; --sy1: 72%; }
-}
-@keyframes soul-wisp2 {
-	0%   { --sx2: 78%; --sy2: 18%; }
-	22%  { --sx2: 28%; --sy2: 34%; }
-	55%  { --sx2: 62%; --sy2: 24%; }
-	80%  { --sx2: 85%; --sy2: 46%; }
-	100% { --sx2: 78%; --sy2: 18%; }
-}
-@keyframes soul-wisp3 {
-	0%   { --sx3: 55%; --sy3: 52%; }
-	35%  { --sx3: 18%; --sy3: 40%; }
-	70%  { --sx3: 80%; --sy3: 63%; }
-	100% { --sx3: 55%; --sy3: 52%; }
-}
-@keyframes soul-wisp4 {
-	0%   { --sx4: 10%; --sy4: 35%; }
-	30%  { --sx4: 50%; --sy4: 20%; }
-	60%  { --sx4: 82%; --sy4: 42%; }
-	85%  { --sx4: 38%; --sy4: 68%; }
-	100% { --sx4: 10%; --sy4: 35%; }
-}
-@keyframes soul-wisp5 {
-	0%   { --sx5: 88%; --sy5: 75%; }
-	25%  { --sx5: 60%; --sy5: 55%; }
-	50%  { --sx5: 25%; --sy5: 80%; }
-	75%  { --sx5: 72%; --sy5: 30%; }
-	100% { --sx5: 88%; --sy5: 75%; }
-}
-@keyframes soul-wisp6 {
-	0%   { --sx6: 45%; --sy6: 20%; }
-	40%  { --sx6: 90%; --sy6: 48%; }
-	75%  { --sx6: 15%; --sy6: 60%; }
-	100% { --sx6: 45%; --sy6: 20%; }
-}
-@keyframes soul-base {
-	0%, 100% { background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0%   50%; }
-	50%       { background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 100% 50%; }
-}
-
-/* Dark mode variants — thematic dark palette per tool */
-:root[data-theme='dark'] body[data-tool='hotmusic'] {
-	--bg:      #130d07;
-	--surface: #1e1309;
-	--border:  rgba(251, 113, 30, 0.2);
-}
-
-:root[data-theme='dark'] body[data-tool='hotmusic']::before {
-	background:
-		radial-gradient(ellipse at 50% 40%, rgba(251, 113, 30, 0.12) 0%, transparent 60%),
-		linear-gradient(145deg, #130d07, #1c1008);
-	background-size: 300% 300%;
-	animation: hot-shift 8s ease-in-out infinite;
-}
-
-:root[data-theme='dark'] body[data-tool='popmusic'] {
-	--bg:      #10081a;
-	--surface: #190d25;
-	--border:  rgba(236, 72, 153, 0.2);
-}
-
-:root[data-theme='dark'] body[data-tool='popmusic']::before {
-	background-image:
-		radial-gradient(circle, rgba(236, 72, 153, 0.07) 1.5px, transparent 1.5px),
-		linear-gradient(135deg, #10081a, #1a0a2e, #10081a, #160d20, #1a0a2e, #10081a);
-	background-size: 22px 22px, 400% 400%;
-	animation: pop-shift 10s ease-in-out infinite;
-}
-
-:root[data-theme='dark'] body[data-tool='snpmusic'] {
-	--bg:      #07100c;
-	--surface: #0d1a12;
-	--border:  rgba(16, 185, 129, 0.2);
-}
-
-:root[data-theme='dark'] body[data-tool='snpmusic']::before {
-	background-image:
-		repeating-linear-gradient(0deg,  rgba(16, 185, 129, 0.06) 0px, transparent 1px, transparent 28px),
-		repeating-linear-gradient(90deg, rgba(16, 185, 129, 0.06) 0px, transparent 1px, transparent 28px),
-		linear-gradient(135deg, #07100c, #0b180e, #07100c, #091510, #0b180e, #07100c);
-	background-size: 100% 100%, 100% 100%, 400% 400%;
-	animation: snp-shift 12s ease-in-out infinite;
-}
-
-:root[data-theme='dark'] body[data-tool='beatmusic'] {
-	--bg:      #1a0509;
-	--surface: #250811;
-	--border:  rgba(225, 29, 72, 0.2);
-}
-
-:root[data-theme='dark'] body[data-tool='beatmusic']::before {
-	background-image:
-		repeating-linear-gradient(0deg,  rgba(225, 29, 72, 0.055) 0px, transparent 1px, transparent 32px),
-		repeating-linear-gradient(90deg, rgba(225, 29, 72, 0.055) 0px, transparent 1px, transparent 32px),
-		radial-gradient(ellipse 70% 45% at 50% 50%, rgba(225, 29, 72, 0.09) 0%, transparent 60%),
-		linear-gradient(135deg, #1a0509, #250811, #1a0509, #200610, #250811, #1a0509);
-	background-size: 100% 100%, 100% 100%, 100% 100%, 400% 400%;
-	animation: heart-bg 9s ease-in-out infinite;
-}
-
-:root[data-theme='dark'] body[data-tool='soulmusic'] {
-	--bg:      #080e0b;
-	--surface: #0e1612;
-	--border:  rgba(91, 122, 106, 0.18);
-}
-
-:root[data-theme='dark'] body[data-tool='soulmusic']::before {
-	background-image:
-		radial-gradient(ellipse 44% 28% at var(--sx1) var(--sy1),
-			rgba(91, 122, 106, 0.22) 0%, rgba(75, 100, 88, 0.10) 32%, transparent 65%),
-		radial-gradient(ellipse 70% 48% at var(--sx2) var(--sy2),
-			rgba(107, 140, 120, 0.16) 0%, rgba(90, 120, 105, 0.07) 40%, transparent 68%),
-		radial-gradient(ellipse 36% 22% at var(--sx3) var(--sy3),
-			rgba(80, 110, 95, 0.20) 0%, rgba(65, 90, 78, 0.08) 36%, transparent 66%),
-		radial-gradient(ellipse 30% 18% at var(--sx4) var(--sy4),
-			rgba(95, 128, 112, 0.18) 0%, rgba(75, 102, 89, 0.07) 38%, transparent 64%),
-		radial-gradient(ellipse 52% 32% at var(--sx5) var(--sy5),
-			rgba(70, 95, 82, 0.15) 0%, rgba(55, 76, 66, 0.06) 42%, transparent 68%),
-		radial-gradient(ellipse 28% 16% at var(--sx6) var(--sy6),
-			rgba(100, 134, 116, 0.19) 0%, rgba(82, 110, 96, 0.07) 34%, transparent 62%),
-		linear-gradient(160deg, #080e0b, #0d1510, #080e0b, #0b130e, #0d1510, #080e0b);
-	background-size: 100% 100%;
-	animation:
-		soul-wisp1 19s ease-in-out infinite,
-		soul-wisp2 27s ease-in-out infinite,
-		soul-wisp3 14s ease-in-out infinite,
-		soul-base  13s ease-in-out infinite;
 }

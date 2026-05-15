@@ -1,0 +1,32 @@
+/* BeAtMuSiC — cardiac rhythm / EKG monitor */
+
+body[data-tool='beatmusic']::before {
+	background-image:
+		repeating-linear-gradient(0deg,  rgba(225, 29, 72, 0.045) 0px, transparent 1px, transparent 32px),
+		repeating-linear-gradient(90deg, rgba(225, 29, 72, 0.045) 0px, transparent 1px, transparent 32px),
+		radial-gradient(ellipse 70% 45% at 50% 50%, rgba(225, 29, 72, 0.07) 0%, transparent 60%),
+		linear-gradient(135deg, #fff1f2, #ffe4e6, #fff8f8, #ffe4e6, #fff1f2);
+	background-size: 100% 100%, 100% 100%, 100% 100%, 400% 400%;
+	animation: heart-bg 9s ease-in-out infinite;
+}
+
+@keyframes heart-bg {
+	0%, 100% { background-position: 0 0, 0 0, 50% 50%, 0%   50%; }
+	50%       { background-position: 0 0, 0 0, 50% 50%, 100% 50%; }
+}
+
+:root[data-theme='dark'] body[data-tool='beatmusic'] {
+	--bg:      #1a0509;
+	--surface: #250811;
+	--border:  rgba(225, 29, 72, 0.2);
+}
+
+:root[data-theme='dark'] body[data-tool='beatmusic']::before {
+	background-image:
+		repeating-linear-gradient(0deg,  rgba(225, 29, 72, 0.055) 0px, transparent 1px, transparent 32px),
+		repeating-linear-gradient(90deg, rgba(225, 29, 72, 0.055) 0px, transparent 1px, transparent 32px),
+		radial-gradient(ellipse 70% 45% at 50% 50%, rgba(225, 29, 72, 0.09) 0%, transparent 60%),
+		linear-gradient(135deg, #1a0509, #250811, #1a0509, #200610, #250811, #1a0509);
+	background-size: 100% 100%, 100% 100%, 100% 100%, 400% 400%;
+	animation: heart-bg 9s ease-in-out infinite;
+}
