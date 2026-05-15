@@ -1,5 +1,6 @@
 <script>
 	import { base } from '$app/paths';
+	import ToolPicker from '$lib/components/ToolPicker.svelte';
 </script>
 
 <div class="page">
@@ -8,6 +9,14 @@
 	<section>
 		<h2>Getting started</h2>
 		<p>Dezyme gives you access to three protein mutation analysis tools: <strong>PopMuSiC</strong>, <strong>HoTMuSiC</strong>, and <strong>SNPMuSiC</strong>. Each tool accepts a protein structure and returns predictions for single-site mutations.</p>
+	</section>
+
+	<section>
+		<h2>Not sure which tool to use?</h2>
+		<p>Answer a couple of questions and we'll point you to the right one.</p>
+		<div class="picker-wrap">
+			<ToolPicker />
+		</div>
 	</section>
 
 	<section>
@@ -104,5 +113,13 @@
 
 	a:hover {
 		text-decoration: underline;
+	}
+
+	.picker-wrap {
+		margin-top: 0.5rem;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 1rem;
+		padding: 1.5rem;
 	}
 </style>
