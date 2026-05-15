@@ -90,6 +90,7 @@ export async function load({ fetch }) {
 
 	return {
 		meta,
+		pdbUrl: `${prefix}/p53.pdb`,
 		summary: parsePops(popsText),
 		mutations: parsePop(popText)
 	};

@@ -25,6 +25,7 @@
 	},
 	"dependencies": {
 		"@types/three": "^0.184.1",
+		"3dmol": "^2.5.4",
 		"chart.js": "^4.5.1",
 		"three": "^0.184.0"
 	}

@@ -3,6 +3,7 @@
 	import { base } from '$app/paths';
 	import { theme } from '$lib/stores/theme';
 	import PdbMetadata from '$lib/components/pdb/PdbMetadata.svelte';
+	import ProteinViewer from '$lib/components/ProteinViewer.svelte';
 	import type { SummaryRow, MutationRow } from './+page.js';
 	import type { Chart as ChartType } from 'chart.js';
 
@@ -44,6 +45,23 @@
 
 	// Filter state — null means "use default from data" (avoids init-before-derived problems)
 	let tab = $state<'summary' | 'mutations'>('summary');
+
+	// 3D viewer selection
+	let selectedResidues = $state(new Set<string>());
+
+	function toggleResidue(key: string) {
+		const next = new Set(selectedResidues);
+		if (next.has(key)) next.delete(key); else next.add(key);
+		selectedResidues = next;
+	}
+
+	function ddgHex(v: number): string {
+		if (v < -0.5) return '#22c55e';
+		if (v < 0)    return '#86efac';
+		if (v < 0.5)  return '#fb923c';
+		return '#ef4444';
+	}
+
 	let _chains = $state<string[] | null>(null);
 	let _structs = $state<string[] | null>(null);
 	let _ddgMin = $state<number | null>(null);
@@ -97,6 +115,15 @@
 		);
 		return [...rows].sort((a, b) => (a[summarySort.col] - b[summarySort.col]) * summarySort.dir);
 	});
+
+	const viewerResidues = $derived(
+		filteredSummary.map(r => ({
+			chain: r.chain,
+			resNum: r.resNum,
+			color: ddgHex(r.avgDdg),
+			selected: selectedResidues.has(`${r.chain}-${r.resNum}`)
+		}))
+	);
 
 	const filteredMutations = $derived.by(() => {
 		const q = search.toLowerCase();
@@ -340,13 +367,49 @@
 		return () => chart.destroy();
 	});
 
+	// ── Floating 3D viewer ──────────────────────────────────────────────────
+	let showViewer  = $state(false);
+	let everOpened  = $state(false); // lazy-mount: keep viewer alive after first open
+	let floatX = $state(0);
+	let floatY = $state(0);
+
+	$effect(() => { if (showViewer) everOpened = true; });
+
+	function openViewer() { showViewer = true; }
+	function closeViewer() { showViewer = false; }
+
+	// Drag
+	let dragOffX = 0, dragOffY = 0;
+
+	function startDrag(e: PointerEvent) {
+		if ((e.target as HTMLElement).closest('button')) return;
+		dragOffX = e.clientX - floatX;
+		dragOffY = e.clientY - floatY;
+		window.addEventListener('pointermove', onDrag);
+		window.addEventListener('pointerup', stopDrag, { once: true });
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+	}
+	function onDrag(e: PointerEvent) {
+		floatX = Math.max(0, Math.min(window.innerWidth  - 420, e.clientX - dragOffX));
+		floatY = Math.max(0, Math.min(window.innerHeight - 380, e.clientY - dragOffY));
+	}
+	function stopDrag() {
+		window.removeEventListener('pointermove', onDrag);
+	}
+
 	onMount(() => {
 		document.body.setAttribute('data-tool', 'popmusic');
+		// Default position: bottom-right
+		floatX = Math.max(16, window.innerWidth  - 452);
+		floatY = Math.max(16, window.innerHeight - 420);
+
 		import('chart.js').then(({ Chart: C, registerables }) => {
 			C.register(...registerables);
 			Chart = C as unknown as typeof ChartType;
 		});
-		const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') modalChart = null; };
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') { modalChart = null; showViewer = false; }
+		};
 		document.addEventListener('keydown', onKey);
 		return () => {
 			document.body.removeAttribute('data-tool');
@@ -400,6 +463,21 @@
 		<button class="tab" class:active={tab === 'mutations'} onclick={() => (tab = 'mutations')}>
 			All mutations
 			<span class="tab-count">{filteredMutations.length}</span>
+		</button>
+		<div class="tabs-spacer"></div>
+		<button
+			class="tab-3d"
+			class:tab-3d-active={showViewer}
+			onclick={showViewer ? closeViewer : openViewer}
+			title="Toggle 3D structure viewer"
+		>
+			<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+				<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+			</svg>
+			3D
+			{#if selectedResidues.size > 0}
+				<span class="tab-3d-badge">{selectedResidues.size}</span>
+			{/if}
 		</button>
 	</div>
 
@@ -513,6 +591,7 @@
 			<table class="data-table">
 				<thead>
 					<tr>
+						<th class="cb-col" title="Highlight in 3D viewer">3D</th>
 						<th>Position</th>
 						<th>Residue</th>
 						<th>2° structure</th>
@@ -550,13 +629,24 @@
 					{#each filteredSummary as row (rowKey(row))}
 						{@const key = rowKey(row)}
 						{@const isOpen = expanded === key}
+						{@const isSel = selectedResidues.has(key)}
 						{@const posMuts = mutationsByPos.get(key) ?? []}
 						<tr
 							class="summary-row"
 							class:is-open={isOpen}
+							class:is-sel={isSel}
 							onclick={() => (expanded = isOpen ? null : key)}
 							title="Click to expand mutations"
 						>
+							<td class="cb-col" onclick={(e) => { e.stopPropagation(); toggleResidue(key); }}>
+								<input
+									type="checkbox"
+									checked={isSel}
+									aria-label="Highlight in 3D viewer"
+									onclick={(e) => e.stopPropagation()}
+									onchange={() => toggleResidue(key)}
+								/>
+							</td>
 							<td class="pos-cell">
 								<span class="expand-icon">{isOpen ? '▾' : '▸'}</span>
 								{row.chain}{row.resNum}
@@ -612,7 +702,7 @@
 					{/each}
 					{#if filteredSummary.length === 0}
 						<tr>
-							<td colspan="7" class="empty-cell">No positions match the current filters</td>
+							<td colspan="8" class="empty-cell">No positions match the current filters</td>
 						</tr>
 					{/if}
 				</tbody>
@@ -665,6 +755,39 @@
 	{/if}
 </div>
 
+<!-- Floating 3D viewer -->
+{#if everOpened}
+	<div
+		class="float-panel"
+		class:float-hidden={!showViewer}
+		style="left: {floatX}px; top: {floatY}px"
+		role="dialog"
+		aria-label="3D Structure viewer"
+	>
+		<div
+			class="float-header"
+			onpointerdown={startDrag}
+			role="toolbar"
+			aria-label="Drag to move"
+		>
+			<span class="float-title">
+				<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+					<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+				</svg>
+				{data.meta.id}
+			</span>
+			{#if selectedResidues.size > 0}
+				<span class="float-sel">{selectedResidues.size} highlighted</span>
+				<button class="float-clear" onclick={() => (selectedResidues = new Set())}>Clear</button>
+			{/if}
+			<button class="float-close" onclick={closeViewer} aria-label="Close">✕</button>
+		</div>
+		<div class="float-body">
+			<ProteinViewer pdbUrl={data.pdbUrl} residues={viewerResidues} height="340px" />
+		</div>
+	</div>
+{/if}
+
 <!-- Chart modal -->
 {#if modalChart}
 	<div
@@ -696,6 +819,153 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1.5rem;
+	}
+
+	/* ── Tabs 3D button ── */
+	.tabs-spacer { flex: 1; }
+
+	.tab-3d {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		background: none;
+		border: 1px solid var(--border);
+		border-radius: 0.45rem;
+		padding: 0.3rem 0.75rem;
+		font-size: 0.8rem;
+		font-weight: 600;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: all 0.15s;
+		margin: auto 0;
+	}
+
+	.tab-3d:hover {
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+
+	.tab-3d-active {
+		background: color-mix(in srgb, var(--accent) 10%, transparent);
+		border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+		color: var(--accent);
+	}
+
+	.tab-3d-badge {
+		background: var(--accent);
+		color: #fff;
+		font-size: 0.68rem;
+		font-weight: 700;
+		border-radius: 999px;
+		padding: 0.05rem 0.4rem;
+		min-width: 18px;
+		text-align: center;
+	}
+
+	/* ── Floating 3D panel ── */
+	.float-panel {
+		position: fixed;
+		z-index: 150;
+		width: 420px;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 1rem;
+		box-shadow: 0 12px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08);
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		transition: box-shadow 0.15s;
+	}
+
+	.float-panel:not(.float-hidden):hover {
+		box-shadow: 0 16px 60px rgba(0,0,0,0.22), 0 2px 10px rgba(0,0,0,0.1);
+	}
+
+	.float-hidden {
+		display: none;
+	}
+
+	.float-header {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.6rem 0.75rem 0.6rem 1rem;
+		border-bottom: 1px solid var(--border);
+		cursor: grab;
+		user-select: none;
+		background: var(--surface);
+	}
+
+	.float-header:active { cursor: grabbing; }
+
+	.float-title {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: 0.8rem;
+		font-weight: 700;
+		color: var(--text);
+		font-family: monospace;
+	}
+
+	.float-sel {
+		font-size: 0.72rem;
+		font-weight: 600;
+		color: var(--accent);
+		background: color-mix(in srgb, var(--accent) 10%, transparent);
+		border-radius: 999px;
+		padding: 0.1rem 0.45rem;
+		white-space: nowrap;
+	}
+
+	.float-clear {
+		background: none;
+		border: 1px solid var(--border);
+		border-radius: 0.3rem;
+		padding: 0.1rem 0.4rem;
+		font-size: 0.7rem;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: border-color 0.12s, color 0.12s;
+		white-space: nowrap;
+	}
+
+	.float-clear:hover { border-color: var(--text-muted); color: var(--text); }
+
+	.float-close {
+		margin-left: auto;
+		background: none;
+		border: none;
+		font-size: 0.85rem;
+		color: var(--text-muted);
+		cursor: pointer;
+		padding: 0.2rem 0.4rem;
+		border-radius: 0.3rem;
+		line-height: 1;
+		transition: background 0.1s, color 0.1s;
+	}
+
+	.float-close:hover { background: var(--border); color: var(--text); }
+
+	.float-body { flex: 1; }
+
+	/* ── Checkbox column ── */
+	.cb-col {
+		width: 36px;
+		text-align: center;
+		padding-left: 0.5rem !important;
+		padding-right: 0.5rem !important;
+	}
+
+	.cb-col input[type='checkbox'] {
+		cursor: pointer;
+		accent-color: var(--accent);
+		width: 14px;
+		height: 14px;
+	}
+
+	.summary-row.is-sel {
+		background: color-mix(in srgb, var(--accent) 5%, transparent);
 	}
 
 	/* ── Header ── */
