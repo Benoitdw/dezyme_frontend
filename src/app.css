@@ -8,6 +8,12 @@
 @import "./lib/tools/themes/beatmusic.css";
 @import "./lib/tools/themes/soulmusic.css";
 
+/* Fallback for any tool without a theme file.
+   :where() gives this zero specificity so any tool rule always wins, regardless of order. */
+:where(body[data-tool])::before {
+	background: linear-gradient(135deg, var(--bg), color-mix(in srgb, var(--bg) 85%, #6366f1));
+}
+
 /* ── Global tokens ──────────────────────────────────────────────── */
 
 :root {

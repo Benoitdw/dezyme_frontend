@@ -16,18 +16,18 @@
 
 body[data-tool='soulmusic']::before {
 	background-image:
-		radial-gradient(ellipse 44% 28% at var(--sx1) var(--sy1),
-			rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.50) 32%, transparent 65%),
-		radial-gradient(ellipse 70% 48% at var(--sx2) var(--sy2),
-			rgba(210, 218, 245, 0.68) 0%, rgba(195, 205, 238, 0.28) 40%, transparent 68%),
-		radial-gradient(ellipse 36% 22% at var(--sx3) var(--sy3),
-			rgba(255, 255, 255, 0.88) 0%, rgba(245, 248, 255, 0.42) 36%, transparent 66%),
-		radial-gradient(ellipse 30% 18% at var(--sx4) var(--sy4),
-			rgba(255, 255, 255, 0.80) 0%, rgba(240, 244, 255, 0.35) 38%, transparent 64%),
-		radial-gradient(ellipse 52% 32% at var(--sx5) var(--sy5),
-			rgba(220, 226, 248, 0.72) 0%, rgba(210, 218, 244, 0.32) 42%, transparent 68%),
-		radial-gradient(ellipse 28% 16% at var(--sx6) var(--sy6),
-			rgba(255, 255, 255, 0.85) 0%, rgba(248, 250, 255, 0.38) 34%, transparent 62%),
+		radial-gradient(ellipse 70% 18% at var(--sx1) var(--sy1),
+			rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.22) 45%, transparent 72%),
+		radial-gradient(ellipse 90% 28% at var(--sx2) var(--sy2),
+			rgba(210, 218, 245, 0.38) 0%, rgba(195, 205, 238, 0.12) 50%, transparent 75%),
+		radial-gradient(ellipse 60% 14% at var(--sx3) var(--sy3),
+			rgba(255, 255, 255, 0.50) 0%, rgba(245, 248, 255, 0.18) 48%, transparent 72%),
+		radial-gradient(ellipse 50% 12% at var(--sx4) var(--sy4),
+			rgba(255, 255, 255, 0.45) 0%, rgba(240, 244, 255, 0.15) 46%, transparent 70%),
+		radial-gradient(ellipse 80% 22% at var(--sx5) var(--sy5),
+			rgba(220, 226, 248, 0.40) 0%, rgba(210, 218, 244, 0.14) 50%, transparent 74%),
+		radial-gradient(ellipse 55% 12% at var(--sx6) var(--sy6),
+			rgba(255, 255, 255, 0.48) 0%, rgba(248, 250, 255, 0.16) 44%, transparent 70%),
 		linear-gradient(165deg, #c2c9e4, #bac2de, #c6cde6, #bec6e2, #c2c9e4);
 	background-size: 100% 100%;
 	animation:
@@ -93,18 +93,18 @@ body[data-tool='soulmusic']::before {
 
 :root[data-theme='dark'] body[data-tool='soulmusic']::before {
 	background-image:
-		radial-gradient(ellipse 44% 28% at var(--sx1) var(--sy1),
-			rgba(91, 122, 106, 0.22) 0%, rgba(75, 100, 88, 0.10) 32%, transparent 65%),
-		radial-gradient(ellipse 70% 48% at var(--sx2) var(--sy2),
-			rgba(107, 140, 120, 0.16) 0%, rgba(90, 120, 105, 0.07) 40%, transparent 68%),
-		radial-gradient(ellipse 36% 22% at var(--sx3) var(--sy3),
-			rgba(80, 110, 95, 0.20) 0%, rgba(65, 90, 78, 0.08) 36%, transparent 66%),
-		radial-gradient(ellipse 30% 18% at var(--sx4) var(--sy4),
-			rgba(95, 128, 112, 0.18) 0%, rgba(75, 102, 89, 0.07) 38%, transparent 64%),
-		radial-gradient(ellipse 52% 32% at var(--sx5) var(--sy5),
-			rgba(70, 95, 82, 0.15) 0%, rgba(55, 76, 66, 0.06) 42%, transparent 68%),
-		radial-gradient(ellipse 28% 16% at var(--sx6) var(--sy6),
-			rgba(100, 134, 116, 0.19) 0%, rgba(82, 110, 96, 0.07) 34%, transparent 62%),
+		radial-gradient(ellipse 70% 18% at var(--sx1) var(--sy1),
+			rgba(91, 122, 106, 0.18) 0%, rgba(75, 100, 88, 0.07) 45%, transparent 72%),
+		radial-gradient(ellipse 90% 28% at var(--sx2) var(--sy2),
+			rgba(107, 140, 120, 0.14) 0%, rgba(90, 120, 105, 0.05) 50%, transparent 75%),
+		radial-gradient(ellipse 60% 14% at var(--sx3) var(--sy3),
+			rgba(80, 110, 95, 0.16) 0%, rgba(65, 90, 78, 0.06) 48%, transparent 72%),
+		radial-gradient(ellipse 50% 12% at var(--sx4) var(--sy4),
+			rgba(95, 128, 112, 0.15) 0%, rgba(75, 102, 89, 0.05) 46%, transparent 70%),
+		radial-gradient(ellipse 80% 22% at var(--sx5) var(--sy5),
+			rgba(70, 95, 82, 0.13) 0%, rgba(55, 76, 66, 0.04) 50%, transparent 74%),
+		radial-gradient(ellipse 55% 12% at var(--sx6) var(--sy6),
+			rgba(100, 134, 116, 0.16) 0%, rgba(82, 110, 96, 0.05) 44%, transparent 70%),
 		linear-gradient(160deg, #080e0b, #0d1510, #080e0b, #0b130e, #0d1510, #080e0b);
 	background-size: 100% 100%;
 	animation:
