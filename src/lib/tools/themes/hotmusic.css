@@ -24,3 +24,21 @@ body[data-tool='hotmusic']::before {
 	background-size: 300% 300%;
 	animation: hot-shift 8s ease-in-out infinite;
 }
+
+/* ── Run form ── */
+
+body[data-tool='hotmusic'] .form-card {
+	border-color: rgba(251, 113, 30, 0.3);
+	animation: ember-glow 4s ease-in-out infinite;
+}
+
+@keyframes ember-glow {
+	0%, 100% { box-shadow: 0 0 28px rgba(251, 113, 30, 0.12), 0 0 72px rgba(239, 68, 68, 0.06); }
+	50%       { box-shadow: 0 0 40px rgba(251, 113, 30, 0.22), 0 0 90px rgba(239, 68, 68, 0.12); }
+}
+
+body[data-tool='hotmusic'] .section-label { color: #c2410c; }
+
+body[data-tool='hotmusic'] .submit-btn {
+	background: linear-gradient(135deg, #ea580c, #dc2626);
+}

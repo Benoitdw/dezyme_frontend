@@ -78,7 +78,7 @@
 
 	function toggleSpin() {
 		spinning = !spinning;
-		viewer?.setSpin(spinning);
+		viewer?.spin(spinning);
 	}
 	function resetView() {
 		viewer?.zoomTo();
@@ -159,6 +159,7 @@
 		right: 0.75rem;
 		display: flex;
 		gap: 0.3rem;
+		z-index: 10;
 	}
 
 	.ctrl {

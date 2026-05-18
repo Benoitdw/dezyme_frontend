@@ -4,7 +4,7 @@ export const beatmusic: ToolConfig = {
 	id: 'beatmusic',
 	name: 'BeAtMuSiC',
 	tagline: 'Evaluate binding affinity changes at protein-protein interfaces upon single-site mutations',
-	accent: '#e11d48',
+	accent: '#0e7490',
 	chainRule: {
 		preselect: (chains) => chains.slice(0, 1),
 		multiple: true

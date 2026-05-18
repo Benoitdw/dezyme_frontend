@@ -28,3 +28,13 @@ body[data-tool='popmusic']::before {
 	background-size: 22px 22px, 400% 400%;
 	animation: pop-shift 10s ease-in-out infinite;
 }
+
+/* ── Run form ── */
+
+body[data-tool='popmusic'] .form-card { border-color: rgba(236, 72, 153, 0.2); }
+
+body[data-tool='popmusic'] .section-label { color: #db2777; }
+
+body[data-tool='popmusic'] .submit-btn {
+	background: linear-gradient(135deg, #ec4899, #a855f7);
+}

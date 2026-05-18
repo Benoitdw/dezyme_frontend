@@ -1,32 +1,73 @@
-/* BeAtMuSiC — cardiac rhythm / EKG monitor */
+/* ──────────────────────────────────────────────────────────────────
+   BeAtMuSiC — Teal "Mountain Range, beating" theme
+   Pure CSS · 4 pseudo-elements · no extra markup required.
+   Layers (back → front):
+     html::before  · grid wash + page tint
+     html::after   · mountain layer 1 (slow, dimmest)
+     body::before  · mountain layer 2 (medium)
+     body::after   · mountain layer 3 (front, sharpest beat)
+   Tokens (--bg / --surface / --border / --accent / --accent-soft) are
+   updated so the chrome (nav, chips, links, warn callout) inherits
+   the teal identity. Override these in app code if you map your
+   tokens differently.
+   ────────────────────────────────────────────────────────────────── */
 
-body[data-tool='beatmusic']::before {
-	background-image:
-		repeating-linear-gradient(0deg,  rgba(225, 29, 72, 0.045) 0px, transparent 1px, transparent 32px),
-		repeating-linear-gradient(90deg, rgba(225, 29, 72, 0.045) 0px, transparent 1px, transparent 32px),
-		radial-gradient(ellipse 70% 45% at 50% 50%, rgba(225, 29, 72, 0.07) 0%, transparent 60%),
-		linear-gradient(135deg, #fff1f2, #ffe4e6, #fff8f8, #ffe4e6, #fff1f2);
-	background-size: 100% 100%, 100% 100%, 100% 100%, 400% 400%;
-	animation: heart-bg 9s ease-in-out infinite;
-}
-
-@keyframes heart-bg {
-	0%, 100% { background-position: 0 0, 0 0, 50% 50%, 0%   50%; }
-	50%       { background-position: 0 0, 0 0, 50% 50%, 100% 50%; }
+/* ── Tokens ──────────────────────────────────────────────────────── */
+body[data-tool='beatmusic'] {
+  --bg:           #ecfeff;
+  --surface:      #ffffff;
+  --border:       rgba(8, 145, 178, 0.18);
+  --accent:       #0e7490;
+  --accent-soft:  #0891b2;
+  --chip-bg:      rgba(8, 145, 178, 0.10);
+  --chip-text:    #155e75;
+  --warn-bg:      #cffafe;
+  --warn-border:  rgba(8, 145, 178, 0.18);
+  --grid-line:    rgba(8, 145, 178, 0.045);
+  --mountain-fill:rgba(8, 145, 178, 0.22);
+  background: var(--bg);
 }
 
 :root[data-theme='dark'] body[data-tool='beatmusic'] {
-	--bg:      #1a0509;
-	--surface: #250811;
-	--border:  rgba(225, 29, 72, 0.2);
+  --bg:           #04141a;
+  --surface:      #072a32;
+  --border:       rgba(8, 145, 178, 0.20);
+  --accent:       #0891b2;
+  --accent-soft:  #22d3ee;
+  --chip-bg:      rgba(8, 145, 178, 0.22);
+  --chip-text:    #67e8f9;
+  --warn-bg:      rgba(8, 145, 178, 0.10);
+  --warn-border:  rgba(8, 145, 178, 0.24);
+  --grid-line:    rgba(8, 145, 178, 0.055);
+  --mountain-fill:rgba(34, 211, 238, 0.42);
 }
 
-:root[data-theme='dark'] body[data-tool='beatmusic']::before {
-	background-image:
-		repeating-linear-gradient(0deg,  rgba(225, 29, 72, 0.055) 0px, transparent 1px, transparent 32px),
-		repeating-linear-gradient(90deg, rgba(225, 29, 72, 0.055) 0px, transparent 1px, transparent 32px),
-		radial-gradient(ellipse 70% 45% at 50% 50%, rgba(225, 29, 72, 0.09) 0%, transparent 60%),
-		linear-gradient(135deg, #1a0509, #250811, #1a0509, #200610, #250811, #1a0509);
-	background-size: 100% 100%, 100% 100%, 100% 100%, 400% 400%;
-	animation: heart-bg 9s ease-in-out infinite;
+/* ── Grid wash + soft page tint ────────────────────────── */
+body[data-tool='beatmusic'] {
+  background-image:
+    repeating-linear-gradient(0deg,  var(--grid-line) 0px, transparent 1px, transparent 32px),
+    repeating-linear-gradient(90deg, var(--grid-line) 0px, transparent 1px, transparent 32px),
+    radial-gradient(ellipse 70% 45% at 50% 50%, rgba(8, 145, 178, 0.06) 0%, transparent 60%),
+    linear-gradient(135deg, var(--bg), color-mix(in oklab, var(--bg) 70%, #ffffff), var(--bg));
+  background-attachment: fixed;
+}
+
+:root[data-theme='dark'] body[data-tool='beatmusic'] {
+  background-image:
+    repeating-linear-gradient(0deg,  var(--grid-line) 0px, transparent 1px, transparent 32px),
+    repeating-linear-gradient(90deg, var(--grid-line) 0px, transparent 1px, transparent 32px),
+    radial-gradient(ellipse 70% 45% at 50% 50%, rgba(34, 211, 238, 0.08) 0%, transparent 60%),
+    linear-gradient(135deg, var(--bg), var(--surface), var(--bg));
+}
+
+/* ── Run form ── */
+
+body[data-tool='beatmusic'] .section-label {
+	color: var(--accent);
+	font-family: 'Courier New', Courier, monospace;
+	letter-spacing: 0.07em;
+}
+
+body[data-tool='beatmusic'] .submit-btn {
+	background: linear-gradient(135deg, #0891b2, #0e7490);
 }

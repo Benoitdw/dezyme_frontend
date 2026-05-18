@@ -12,6 +12,7 @@
 	import type { PdbMetadata as PdbMeta } from '$lib/utils/pdb';
 	import SoftIdCard from '$lib/components/SoftIdCard.svelte';
 	import MutationList from '$lib/components/MutationList.svelte';
+	import DiffuseSineHorizon from '$lib/components/DiffuseSineHorizon.svelte';
 
 	let selectedTool = $state<ToolId>(($page.url.searchParams.get('tool') as ToolId) ?? 'popmusic');
 	let pdbMeta = $state<PdbMeta | null>(null);
@@ -50,7 +51,9 @@
 
 	$effect(() => {
 		document.body.setAttribute('data-tool', selectedTool);
-		return () => document.body.removeAttribute('data-tool');
+		return () => {
+			document.body.removeAttribute('data-tool');
+		};
 	});
 
 	async function onToolChange(id: ToolId) {
@@ -94,6 +97,8 @@
 		}
 	}
 </script>
+
+<DiffuseSineHorizon />
 
 <div class="page" data-tool={selectedTool} class:transitioning>
 	<div class="tool-tabs">
@@ -234,109 +239,6 @@
 
 	.page.transitioning {
 		opacity: 0;
-	}
-
-	/* ── hotmusic — fire & heat ─────────────────────────────────── */
-
-	.page[data-tool='hotmusic'] :global(.form-card) {
-		border-color: rgba(251, 113, 30, 0.3);
-		box-shadow: 0 0 28px rgba(251, 113, 30, 0.12), 0 0 72px rgba(239, 68, 68, 0.06);
-		animation: ember-glow 4s ease-in-out infinite;
-	}
-
-	@keyframes ember-glow {
-		0%, 100% { box-shadow: 0 0 28px rgba(251, 113, 30, 0.12), 0 0 72px rgba(239, 68, 68, 0.06); }
-		50% { box-shadow: 0 0 40px rgba(251, 113, 30, 0.22), 0 0 90px rgba(239, 68, 68, 0.12); }
-	}
-
-	.page[data-tool='hotmusic'] :global(.section-label) {
-		color: #c2410c;
-	}
-
-	.page[data-tool='hotmusic'] :global(.submit-btn) {
-		background: linear-gradient(135deg, #ea580c, #dc2626);
-	}
-
-	/* ── popmusic — bubbly & vivid ──────────────────────────────── */
-
-	.page[data-tool='popmusic'] :global(.form-card) {
-		border-color: rgba(236, 72, 153, 0.2);
-	}
-
-	.page[data-tool='popmusic'] :global(.section-label) {
-		color: #db2777;
-	}
-
-	.page[data-tool='popmusic'] :global(.submit-btn) {
-		background: linear-gradient(135deg, #ec4899, #a855f7);
-	}
-
-	/* ── snpmusic — mutations & genomics ────────────────────────── */
-
-	.page[data-tool='snpmusic'] :global(.form-card) {
-		border-color: rgba(16, 185, 129, 0.25);
-	}
-
-	.page[data-tool='snpmusic'] :global(.section-label) {
-		font-family: 'Courier New', Courier, monospace;
-		color: #059669;
-		letter-spacing: 0.1em;
-	}
-
-	.page[data-tool='snpmusic'] :global(.submit-btn) {
-		background: linear-gradient(135deg, #059669, #0284c7);
-	}
-
-	/* ── beatmusic — cardiac rhythm / EKG ──────────────────────── */
-
-	.page[data-tool='beatmusic'] :global(.form-card) {
-		border-color: rgba(225, 29, 72, 0.25);
-		animation: heartbeat-glow 1.6s ease-in-out infinite;
-	}
-
-	/* lub … dub … rest */
-	@keyframes heartbeat-glow {
-		0%,  100% { box-shadow: 0 0 18px rgba(225, 29, 72, 0.07), 0 0 56px rgba(225, 29, 72, 0.03); }
-		15%        { box-shadow: 0 0 36px rgba(225, 29, 72, 0.28), 0 0 80px rgba(225, 29, 72, 0.10); }
-		30%        { box-shadow: 0 0 18px rgba(225, 29, 72, 0.09), 0 0 56px rgba(225, 29, 72, 0.04); }
-		45%        { box-shadow: 0 0 48px rgba(225, 29, 72, 0.34), 0 0 100px rgba(225, 29, 72, 0.14); }
-		65%        { box-shadow: 0 0 18px rgba(225, 29, 72, 0.07), 0 0 56px rgba(225, 29, 72, 0.03); }
-	}
-
-	.page[data-tool='beatmusic'] :global(.section-label) {
-		color: #be123c;
-		font-family: 'Courier New', Courier, monospace;
-		letter-spacing: 0.07em;
-	}
-
-	.page[data-tool='beatmusic'] :global(.submit-btn) {
-		background: linear-gradient(135deg, #e11d48, #be123c);
-	}
-
-	/* ── soulmusic — golden mist / spectral swamp ───────────────── */
-
-	.page[data-tool='soulmusic'] :global(.form-card) {
-		border-color: rgba(136, 152, 184, 0.40);
-		animation: wisp-glow 11s ease-in-out infinite;
-	}
-
-	/* Three uneven peaks — feels like a will-o'-wisp, not a metronome */
-	@keyframes wisp-glow {
-		0%   { box-shadow: 0 0 28px rgba(136, 152, 184, 0.07), 0 0 70px rgba(136, 152, 184, 0.03); }
-		12%  { box-shadow: 0 0 55px rgba(136, 152, 184, 0.18), 0 0 110px rgba(136, 152, 184, 0.08); }
-		25%  { box-shadow: 0 0 22px rgba(136, 152, 184, 0.05), 0 0 55px rgba(136, 152, 184, 0.02); }
-		48%  { box-shadow: 0 0 72px rgba(136, 152, 184, 0.24), 0 0 140px rgba(136, 152, 184, 0.10); }
-		65%  { box-shadow: 0 0 18px rgba(136, 152, 184, 0.04), 0 0 48px rgba(136, 152, 184, 0.02); }
-		79%  { box-shadow: 0 0 40px rgba(136, 152, 184, 0.12), 0 0 88px rgba(136, 152, 184, 0.05); }
-		100% { box-shadow: 0 0 28px rgba(136, 152, 184, 0.07), 0 0 70px rgba(136, 152, 184, 0.03); }
-	}
-
-	.page[data-tool='soulmusic'] :global(.section-label) {
-		color: #6878a0;
-	}
-
-	.page[data-tool='soulmusic'] :global(.submit-btn) {
-		background: linear-gradient(135deg, #6878a0, #8898b8);
 	}
 
 	/* ── Coming soon panel ──────────────────────────────────────── */

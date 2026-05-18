@@ -29,3 +29,17 @@ body[data-tool='snpmusic']::before {
 	background-size: 100% 100%, 100% 100%, 400% 400%;
 	animation: snp-shift 12s ease-in-out infinite;
 }
+
+/* ── Run form ── */
+
+body[data-tool='snpmusic'] .form-card { border-color: rgba(16, 185, 129, 0.25); }
+
+body[data-tool='snpmusic'] .section-label {
+	font-family: 'Courier New', Courier, monospace;
+	color: #059669;
+	letter-spacing: 0.1em;
+}
+
+body[data-tool='snpmusic'] .submit-btn {
+	background: linear-gradient(135deg, #059669, #0284c7);
+}
