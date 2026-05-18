@@ -1,3 +1,4 @@
+import { toolList } from '$lib/tools';
 import type { ToolId } from '$lib/tools/types';
 
 export interface StoredJob {
@@ -33,6 +34,7 @@ export function getRecentJobs(): StoredJob[] {
 }
 
 export function parseToolFromId(analysisId: string): ToolId | null {
-	const prefix = analysisId.split('_')[0] as ToolId;
-	return ['popmusic', 'hotmusic', 'snpmusic'].includes(prefix) ? prefix : null;
+	const prefix = analysisId.split('_')[0];
+	const ids = toolList.map((t) => t.id);
+	return ids.includes(prefix as ToolId) ? (prefix as ToolId) : null;
 }
