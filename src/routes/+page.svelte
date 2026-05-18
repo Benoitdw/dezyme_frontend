@@ -147,7 +147,7 @@
 		<p class="subtitle">
 			Submit a protein structure, pick a tool, get quantitative predictions.
 		</p>
-		<a href="{base}/run" class="cta">Run an analysis →</a>
+		<a href="{base}/run" class="cta">Run an analysis <i class="fa-solid fa-arrow-right"></i></a>
 	</div>
 </section>
 
