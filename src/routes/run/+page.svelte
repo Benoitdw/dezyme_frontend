@@ -237,6 +237,16 @@
 		transition: opacity 0.28s ease;
 	}
 
+	@media (max-width: 640px) {
+		.page {
+			padding: 1.25rem 1rem;
+		}
+
+		.form-card {
+			padding: 1.25rem 1rem;
+		}
+	}
+
 	.page.transitioning {
 		opacity: 0;
 	}
@@ -313,6 +323,18 @@
 		background: var(--bg);
 		color: var(--accent);
 		font-weight: 700;
+	}
+
+	@media (max-width: 640px) {
+		.tool-tabs {
+			flex-direction: column;
+		}
+
+		.tab {
+			flex: none;
+			text-align: left;
+			padding: 0.65rem 1rem;
+		}
 	}
 
 	.form-card {

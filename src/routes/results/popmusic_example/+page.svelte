@@ -6,7 +6,7 @@
 	import ProteinViewer from '$lib/components/ProteinViewer.svelte';
 	import type { SummaryRow, MutationRow } from './+page.js';
 	import type { Chart as ChartType } from 'chart.js';
-
+	import DiffuseSineHorizon from '$lib/components/DiffuseSineHorizon.svelte';
 	// Loaded client-side only to avoid SSR issues
 	let Chart = $state<typeof ChartType | null>(null);
 
@@ -417,7 +417,7 @@
 		};
 	});
 </script>
-
+	<DiffuseSineHorizon />
 <div class="page" style="--accent: {ACCENT}">
 	<!-- Header -->
 	<div class="header">
@@ -667,7 +667,7 @@
 						</tr>
 						{#if isOpen}
 							<tr class="detail-row">
-								<td colspan="7">
+								<td colspan="8">
 									<div class="detail-panel">
 										<div class="detail-header">
 											<strong>{row.resName} {row.chain}{row.resNum}</strong>

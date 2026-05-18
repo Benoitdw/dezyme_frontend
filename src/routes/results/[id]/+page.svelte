@@ -7,6 +7,7 @@
 	import { parseToolFromId } from '$lib/utils/storage';
 	import type { JobStatus } from '$lib/utils/api';
 	import ProteinPending from '$lib/components/ProteinPending.svelte';
+	import DiffuseSineHorizon from '$lib/components/DiffuseSineHorizon.svelte';
 
 	const analysisId = $page.params.id ?? '';
 	const toolId = parseToolFromId(analysisId);
@@ -43,7 +44,7 @@
 		navigator.clipboard.writeText(analysisId);
 	}
 </script>
-
+<DiffuseSineHorizon />
 <div class="page">
 	<div class="header">
 		<div class="title-row">
