@@ -17,9 +17,12 @@
 		mutations: MutationRow[];
 		meta: PdbMeta;
 		pdbUrl: string;
+		popsFile: string;
+		popFile: string;
+		pdbFile: string;
 	}
 
-	let { analysisId, structureId, summary, mutations, meta, pdbUrl }: Props = $props();
+	let { analysisId, structureId, summary, mutations, meta, pdbUrl, popsFile, popFile, pdbFile }: Props = $props();
 
 	const ACCENT = '#6366f1';
 
@@ -303,13 +306,13 @@
 				<button class="action-btn dl-btn" onclick={() => (showDownload = !showDownload)}>↓ Download</button>
 				{#if showDownload}
 					<div class="dl-menu">
-						<a href="/api/analysis/{analysisId}/output/test.pops" download="results.pops" class="dl-item">
+						<a href="/api/analysis/{analysisId}/output/{popsFile}" download={popsFile} class="dl-item">
 							<span class="dl-ext">.pops</span> Position summary
 						</a>
-						<a href="/api/analysis/{analysisId}/output/test.pop" download="results.pop" class="dl-item">
+						<a href="/api/analysis/{analysisId}/output/{popFile}" download={popFile} class="dl-item">
 							<span class="dl-ext">.pop</span> All mutations
 						</a>
-						<a href="/api/analysis/{analysisId}/output/test.pdb" download="results.pdb" class="dl-item">
+						<a href="/api/analysis/{analysisId}/output/{pdbFile}" download={pdbFile} class="dl-item">
 							<span class="dl-ext">.pdb</span> Structure file
 						</a>
 					</div>

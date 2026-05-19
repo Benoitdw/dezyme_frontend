@@ -27,23 +27,26 @@
 	let resultMutations = $state<MutationRow[] | null>(null);
 	let resultMeta      = $state<PdbMetadata | null>(null);
 	let resultPdbUrl    = $state<string | null>(null);
+	let resultPopsFile  = $state<string | null>(null);
+	let resultPopFile   = $state<string | null>(null);
+	let resultPdbFile   = $state<string | null>(null);
 
 	async function loadResults(p: JobPayloadSummary) {
 		if (p.tool !== 'popmusic') return;
 
 		const outputBase = `/api/analysis/${analysisId}/output`;
 
-		// Find .pops, .pop and .pdb files
-		const [popsRes, popRes, pdbRes] = await Promise.all([
-			fetch(`${outputBase}/test.pops`),
-			fetch(`${outputBase}/test.pop`),
-			fetch(`${outputBase}/test.pdb`),
-		]);
-
-		if (!popsRes.ok || !popRes.ok || !pdbRes.ok) return;
+		// List output files then find by extension
+		const files: string[] = await fetch(outputBase).then((r) => r.json());
+		const popsFile = files.find((f) => f.endsWith('.pops'));
+		const popFile  = files.find((f) => f.endsWith('.pop') && !f.endsWith('.pops'));
+		const pdbFile  = files.find((f) => f.endsWith('.pdb'));
+		if (!popsFile || !popFile || !pdbFile) return;
 
 		const [popsText, popText, pdbText] = await Promise.all([
-			popsRes.text(), popRes.text(), pdbRes.text(),
+			fetch(`${outputBase}/${popsFile}`).then((r) => r.text()),
+			fetch(`${outputBase}/${popFile}`).then((r) => r.text()),
+			fetch(`${outputBase}/${pdbFile}`).then((r) => r.text()),
 		]);
 
 		const meta = parsePdbFile(pdbText);
@@ -52,7 +55,10 @@
 		resultSummary   = parsePops(popsText);
 		resultMutations = parsePop(popText);
 		resultMeta      = meta;
-		resultPdbUrl    = `${outputBase}/test.pdb`;
+		resultPdbUrl    = `${outputBase}/${pdbFile}`;
+		resultPopsFile  = popsFile;
+		resultPopFile   = popFile;
+		resultPdbFile   = pdbFile;
 	}
 
 	async function poll() {
@@ -92,7 +98,7 @@
 
 <DiffuseSineHorizon />
 
-{#if status === 'done' && resultSummary && resultMutations && resultMeta && resultPdbUrl && payload}
+{#if status === 'done' && resultSummary && resultMutations && resultMeta && resultPdbUrl && resultPopsFile && resultPopFile && resultPdbFile && payload}
 	<PopmusicResults
 		{analysisId}
 		structureId={payload.structureId}
@@ -100,6 +106,9 @@
 		mutations={resultMutations}
 		meta={resultMeta}
 		pdbUrl={resultPdbUrl}
+		popsFile={resultPopsFile}
+		popFile={resultPopFile}
+		pdbFile={resultPdbFile}
 	/>
 {:else}
 	<div class="page">
