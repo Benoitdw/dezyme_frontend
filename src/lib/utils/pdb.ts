@@ -1,5 +1,11 @@
 export type InputType = 'pdb-id' | 'uniprot' | 'unknown';
 
+export interface ChainInfo {
+	name?: string;
+	length: number;
+	sequence: string;  // full 1-letter sequence
+}
+
 export interface PdbMetadata {
 	id: string;
 	name: string;
@@ -11,7 +17,30 @@ export interface PdbMetadata {
 	residueCount?: number;
 	ligandCount?: number;
 	residues?: Record<string, string>;  // "A2" → "ALA" (chain+resNum → 3-letter AA)
+	chainInfo?: Record<string, ChainInfo>;
 }
+
+// Standard + common modified residues found in PDB files
+export const AA3TO1: Record<string, string> = {
+	// Standard 20
+	ALA: 'A', ARG: 'R', ASN: 'N', ASP: 'D', CYS: 'C',
+	GLN: 'Q', GLU: 'E', GLY: 'G', HIS: 'H', ILE: 'I',
+	LEU: 'L', LYS: 'K', MET: 'M', PHE: 'F', PRO: 'P',
+	SER: 'S', THR: 'T', TRP: 'W', TYR: 'Y', VAL: 'V',
+	// Special / ambiguous
+	SEC: 'U', PYL: 'O', ASX: 'B', GLX: 'Z', XLE: 'J', XAA: 'X',
+	// Common modified — selenomethionine, hydroxyproline, phospho, etc.
+	MSE: 'M', FME: 'M', CXM: 'M',
+	HYP: 'P', DPR: 'P',
+	TPO: 'T', SEP: 'S', PTR: 'Y',
+	CSO: 'C', CME: 'C', CSS: 'C', CSD: 'C', OCS: 'C',
+	MLY: 'K', M3L: 'K', ALY: 'K', LLP: 'K',
+	HIP: 'H', HIE: 'H', HID: 'H', NEP: 'H',
+	PCA: 'E', CGU: 'E',
+	DAL: 'A', DGL: 'E', DGN: 'Q', DHI: 'H', DIL: 'I',
+	DLE: 'L', DLY: 'K', DPN: 'F', DPR2: 'P', DSN: 'S',
+	DTH: 'T', DTR: 'W', DTY: 'Y', DVA: 'V',
+};
 
 function parseResidueMap(atomLines: Iterable<string>): Record<string, string> {
 	const map: Record<string, string> = {};
@@ -25,6 +54,31 @@ function parseResidueMap(atomLines: Iterable<string>): Record<string, string> {
 		if (!map[key]) map[key] = resName;
 	}
 	return map;
+}
+
+function buildChainInfo(
+	residues: Record<string, string>,
+	names: Record<string, string> = {}
+): Record<string, ChainInfo> {
+	const byChain: Record<string, Array<{ num: number; aa: string }>> = {};
+
+	for (const [key, resName] of Object.entries(residues)) {
+		const chain = key[0];
+		const num = parseInt(key.slice(1), 10);
+		if (!byChain[chain]) byChain[chain] = [];
+		byChain[chain].push({ num, aa: AA3TO1[resName] ?? 'X' });
+	}
+
+	const result: Record<string, ChainInfo> = {};
+	for (const [chain, entries] of Object.entries(byChain)) {
+		entries.sort((a, b) => a.num - b.num);
+		result[chain] = {
+			name: names[chain],
+			length: entries.length,
+			sequence: entries.map((r) => r.aa).join(''),
+		};
+	}
+	return result;
 }
 
 function fmtExperimentType(method?: string): string | undefined {
@@ -69,18 +123,35 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 			e?.rcsb_polymer_entity_container_identifiers?.auth_asym_ids ?? []
 		);
 
+		// Map each chain to its entity description
+		const chainNames: Record<string, string> = {};
+		for (const e of entityResponses) {
+			const desc: string | undefined = e?.rcsb_polymer_entity?.pdbx_description;
+			if (!desc) continue;
+			const ids: string[] = e?.rcsb_polymer_entity_container_identifiers?.auth_asym_ids ?? [];
+			for (const cid of ids) chainNames[cid] = desc;
+		}
+
 		const nonPolymerCount: number = data.rcsb_entry_info?.non_polymer_entity_count ?? 0;
 		const solventCount: number    = data.rcsb_entry_info?.solvent_entity_count ?? 0;
 
-		// Fetch coordinate file in parallel to build residue map for autocomplete
 		let residues: Record<string, string> | undefined;
+		let chainInfo: Record<string, ChainInfo> | undefined;
 		try {
 			const pdbFile = await fetch(`https://files.rcsb.org/download/${id}.pdb`);
 			if (pdbFile.ok) {
 				const text = await pdbFile.text();
 				residues = parseResidueMap(text.split('\n'));
+				chainInfo = buildChainInfo(residues, chainNames);
 			}
-		} catch { /* non-blocking — residue autocomplete just won't work */ }
+		} catch { /* non-blocking */ }
+
+		// Fallback: build chainInfo from names alone if residues unavailable
+		if (!chainInfo && Object.keys(chainNames).length > 0) {
+			chainInfo = Object.fromEntries(
+				Object.entries(chainNames).map(([c, name]) => [c, { name, length: 0, sequence: '' }])
+			);
+		}
 
 		return {
 			id,
@@ -93,6 +164,7 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 			residueCount: data.rcsb_entry_info?.deposited_polymer_monomer_count,
 			ligandCount:  Math.max(0, nonPolymerCount - solventCount),
 			residues,
+			chainInfo,
 		};
 	}
 
@@ -123,21 +195,18 @@ export function parsePdbFile(content: string): PdbMetadata {
 	const titleLine = lines.find((l) => l.startsWith('TITLE'));
 	const name = titleLine ? titleLine.slice(10).trim() : 'Uploaded structure';
 
-	// R-factor from REMARK 3
 	let rFactor: number | undefined;
 	for (const l of lines) {
 		const m = l.match(/^REMARK\s+3\s+R VALUE\s+\(WORKING SET\)\s*:\s*([0-9.]+)/);
 		if (m) { rFactor = parseFloat(m[1]); break; }
 	}
 
-	// Count unique residues from ATOM records
 	const residueKeys = new Set<string>();
 	for (const l of lines) {
 		if (!l.startsWith('ATOM')) continue;
 		residueKeys.add(`${l[21]}${l.slice(22, 26).trim()}`);
 	}
 
-	// Count unique ligand instances from HETATM, excluding water
 	const WATER = new Set(['HOH', 'WAT', 'H2O', 'DOD']);
 	const ligandKeys = new Set<string>();
 	for (const l of lines) {
@@ -147,6 +216,8 @@ export function parsePdbFile(content: string): PdbMetadata {
 		ligandKeys.add(`${l[21]}${l.slice(22, 26).trim()}`);
 	}
 
+	const residues = parseResidueMap(lines);
+
 	return {
 		id: 'custom',
 		name,
@@ -154,6 +225,7 @@ export function parsePdbFile(content: string): PdbMetadata {
 		rFactor,
 		residueCount: residueKeys.size || undefined,
 		ligandCount:  ligandKeys.size || undefined,
-		residues: parseResidueMap(lines),
+		residues,
+		chainInfo: buildChainInfo(residues),
 	};
 }
