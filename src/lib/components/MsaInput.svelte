@@ -180,26 +180,30 @@
 
 <div class="msa-input">
 	{#if loaded}
-		<div class="fetch-row">
-			<div class="fetch-info">
-				<span class="fetch-label">{loaded.filename}</span>
-				<span class="fetch-sub">{loaded.lines.toLocaleString()} lines</span>
+		<div class="loaded-card" class:loaded-card--open={showPreview}>
+			<div class="fetch-row">
+				<div class="fetch-info">
+					<span class="fetch-label">{loaded.filename}</span>
+					<span class="fetch-sub">{loaded.lines.toLocaleString()} lines</span>
+				</div>
+				<div class="loaded-actions">
+					<button
+						class="action-btn"
+						class:action-btn--active={showPreview}
+						onclick={() => { showPreview = !showPreview; }}
+						type="button"
+					>Preview</button>
+					<button class="action-btn" onclick={download} type="button">Download</button>
+					<button class="action-btn action-btn--muted" onclick={clear} type="button">Remove</button>
+				</div>
 			</div>
-			<div class="loaded-actions">
-				<button
-					class="action-btn"
-					class:action-btn--active={showPreview}
-					onclick={() => { showPreview = !showPreview; }}
-					type="button"
-				>Preview</button>
-				<button class="action-btn" onclick={download} type="button">Download</button>
-				<button class="action-btn action-btn--muted" onclick={clear} type="button">Remove</button>
-			</div>
-		</div>
 
-		{#if showPreview}
-			<MsaViewer msaContent={loaded.content} />
-		{/if}
+			{#if showPreview}
+				<div class="preview-area">
+					<MsaViewer msaContent={loaded.content} />
+				</div>
+			{/if}
+		</div>
 	{:else}
 		{#if msaUrl}
 			<div class="fetch-row">
@@ -247,6 +251,25 @@
 		gap: 0.75rem;
 	}
 
+	.loaded-card {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 0.625rem;
+		overflow: hidden;
+	}
+
+	.loaded-card .fetch-row {
+		border-bottom: none;
+	}
+
+	.loaded-card--open .fetch-row {
+		border-bottom: 1px solid var(--border);
+	}
+
+	.preview-area {
+		padding: 1rem;
+	}
+
 	.fetch-row {
 		display: flex;
 		align-items: center;
@@ -255,6 +278,12 @@
 		background: var(--surface);
 		border: 1px solid var(--border);
 		border-radius: 0.625rem;
+		padding: 0.75rem 0.875rem;
+	}
+
+	.loaded-card .fetch-row {
+		border: none;
+		border-radius: 0;
 		padding: 0.75rem 0.875rem;
 	}
 

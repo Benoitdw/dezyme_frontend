@@ -428,6 +428,7 @@
 
 <style>
 	.viewer {
+		position: relative;
 		width: 100%;
 		overflow-x: auto;
 		display: flex;
