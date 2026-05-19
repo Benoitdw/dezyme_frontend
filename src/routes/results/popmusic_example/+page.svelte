@@ -594,13 +594,13 @@
 						<th class="cb-col" title="Highlight in 3D viewer">3D</th>
 						<th>Position</th>
 						<th>Residue</th>
-						<th>2° structure</th>
+						<th>Sec. Structure</th>
 						<th
 							class="num sortable"
 							class:sort-active={summarySort.col === 'accessibility'}
 							onclick={() => toggleSummarySort('accessibility')}
 						>
-							Accessibility <span class="sort-arrow">{summarySort.col === 'accessibility' ? (summarySort.dir === 1 ? '↑' : '↓') : '↕'}</span>
+							RSA <span class="sort-arrow">{summarySort.col === 'accessibility' ? (summarySort.dir === 1 ? '↑' : '↓') : '↕'}</span>
 						</th>
 						<th
 							class="num sortable"
@@ -718,8 +718,8 @@
 					<tr>
 						<th>Position</th>
 						<th>Mutation</th>
-						<th>2° structure</th>
-						<th class="num">Accessibility</th>
+						<th>Sec. Structure</th>
+						<th class="num">RSA</th>
 						<th class="num sortable" onclick={() => (sortDir = sortDir === 1 ? -1 : 1)}>
 							ΔΔG (kcal/mol)
 							<span class="sort-arrow">{sortDir === 1 ? '↑' : '↓'}</span>

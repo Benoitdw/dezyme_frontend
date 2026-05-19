@@ -155,6 +155,8 @@
 						chainRule={tool.chainRule}
 						bind:selected={selectedChains}
 						onChange={(s) => (selectedChains = s)}
+						chainInfo={pdbMeta.chainInfo}
+						accent={tool.accent}
 					/>
 				</section>
 			{/if}
