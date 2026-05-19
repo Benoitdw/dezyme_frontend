@@ -44,7 +44,7 @@ function fmtExperimentType(method?: string): string | undefined {
 
 export function detectInputType(value: string): InputType {
 	const v = value.trim().toUpperCase();
-	if (/^[A-Z0-9]{4}$/.test(v)) return 'pdb-id';
+	if (/^[0-9][A-Z0-9]{3}$/.test(v)) return 'pdb-id';
 	if (/^[OPQ][0-9][A-Z0-9]{3}[0-9]$|^[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}$/.test(v)) return 'uniprot';
 	return 'unknown';
 }
