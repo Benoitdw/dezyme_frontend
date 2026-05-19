@@ -7,8 +7,8 @@
 	import { parsePops, parsePop } from '$lib/utils/popmusic';
 	import { parsePdbFile } from '$lib/utils/pdb';
 	import type { JobPayloadSummary, JobStatus } from '$lib/utils/api';
-	import type { SummaryRow, MutationRow } from '$lib/utils/popmusic';
 	import type { PdbMetadata } from '$lib/utils/pdb';
+	import type { SummaryRow, MutationRow } from '$lib/utils/popmusic';
 	import ProteinPending from '$lib/components/ProteinPending.svelte';
 	import DiffuseSineHorizon from '$lib/components/DiffuseSineHorizon.svelte';
 	import PopmusicResults from '$lib/components/results/PopmusicResults.svelte';
@@ -22,21 +22,20 @@
 	let showPayload = $state(false);
 	let interval: ReturnType<typeof setInterval> | null = null;
 
-	// Results state (populated when done)
-	let resultSummary   = $state<SummaryRow[] | null>(null);
-	let resultMutations = $state<MutationRow[] | null>(null);
-	let resultMeta      = $state<PdbMetadata | null>(null);
-	let resultPdbUrl    = $state<string | null>(null);
-	let resultPopsFile  = $state<string | null>(null);
-	let resultPopFile   = $state<string | null>(null);
-	let resultPdbFile   = $state<string | null>(null);
+	interface Results {
+		summary: SummaryRow[];
+		mutations: MutationRow[];
+		meta: PdbMetadata;
+		pdbUrl: string;
+		downloadUrls: { pops: string; pop: string; pdb: string };
+	}
+	let results = $state<Results | null>(null);
 
 	async function loadResults(p: JobPayloadSummary) {
 		if (p.tool !== 'popmusic') return;
 
 		const outputBase = `/api/analysis/${analysisId}/output`;
 
-		// List output files then find by extension
 		const files: string[] = await fetch(outputBase).then((r) => r.json());
 		const popsFile = files.find((f) => f.endsWith('.pops'));
 		const popFile  = files.find((f) => f.endsWith('.pop') && !f.endsWith('.pops'));
@@ -52,13 +51,17 @@
 		const meta = parsePdbFile(pdbText);
 		meta.id = p.structureId;
 
-		resultSummary   = parsePops(popsText);
-		resultMutations = parsePop(popText);
-		resultMeta      = meta;
-		resultPdbUrl    = `${outputBase}/${pdbFile}`;
-		resultPopsFile  = popsFile;
-		resultPopFile   = popFile;
-		resultPdbFile   = pdbFile;
+		results = {
+			summary:      parsePops(popsText),
+			mutations:    parsePop(popText),
+			meta,
+			pdbUrl:       `${outputBase}/${pdbFile}`,
+			downloadUrls: {
+				pops: `${outputBase}/${popsFile}`,
+				pop:  `${outputBase}/${popFile}`,
+				pdb:  `${outputBase}/${pdbFile}`,
+			},
+		};
 	}
 
 	async function poll() {
@@ -98,17 +101,17 @@
 
 <DiffuseSineHorizon />
 
-{#if status === 'done' && resultSummary && resultMutations && resultMeta && resultPdbUrl && resultPopsFile && resultPopFile && resultPdbFile && payload}
+{#if status === 'done' && results && payload}
 	<PopmusicResults
-		{analysisId}
 		structureId={payload.structureId}
-		summary={resultSummary}
-		mutations={resultMutations}
-		meta={resultMeta}
-		pdbUrl={resultPdbUrl}
-		popsFile={resultPopsFile}
-		popFile={resultPopFile}
-		pdbFile={resultPdbFile}
+		summary={results.summary}
+		mutations={results.mutations}
+		meta={results.meta}
+		pdbUrl={results.pdbUrl}
+		title={payload.structureId}
+		subtitle={analysisId}
+		backUrl="/run?tool=popmusic"
+		downloadUrls={results.downloadUrls}
 	/>
 {:else}
 	<div class="page">

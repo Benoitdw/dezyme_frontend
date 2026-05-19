@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { base } from '$app/paths';
 	import { theme } from '$lib/stores/theme';
 	import PdbMetadata from '$lib/components/pdb/PdbMetadata.svelte';
 	import ProteinViewer from '$lib/components/ProteinViewer.svelte';
@@ -11,18 +10,21 @@
 	let Chart = $state<typeof ChartType | null>(null);
 
 	interface Props {
-		analysisId: string;
 		structureId: string;
 		summary: SummaryRow[];
 		mutations: MutationRow[];
 		meta: PdbMeta;
 		pdbUrl: string;
-		popsFile: string;
-		popFile: string;
-		pdbFile: string;
+		downloadUrls: { pops: string; pop: string; pdb: string };
+		title?: string;
+		subtitle?: string;
+		backUrl?: string;
 	}
 
-	let { analysisId, structureId, summary, mutations, meta, pdbUrl, popsFile, popFile, pdbFile }: Props = $props();
+	let { structureId, summary, mutations, meta, pdbUrl, downloadUrls, title, subtitle, backUrl }: Props = $props();
+
+	const displayTitle    = $derived(title    ?? structureId);
+	const displaySubtitle = $derived(subtitle ?? '');
 
 	const ACCENT = '#6366f1';
 
@@ -297,8 +299,8 @@
 		<div class="header-left">
 			<span class="tool-badge">PopMuSiC</span>
 			<div>
-				<h1 class="page-title">{structureId}</h1>
-				<span class="page-sub">{analysisId}</span>
+				<h1 class="page-title">{displayTitle}</h1>
+				{#if displaySubtitle}<span class="page-sub">{displaySubtitle}</span>{/if}
 			</div>
 		</div>
 		<div class="header-actions">
@@ -306,19 +308,21 @@
 				<button class="action-btn dl-btn" onclick={() => (showDownload = !showDownload)}>↓ Download</button>
 				{#if showDownload}
 					<div class="dl-menu">
-						<a href="/api/analysis/{analysisId}/output/{popsFile}" download={popsFile} class="dl-item">
+						<a href={downloadUrls.pops} class="dl-item">
 							<span class="dl-ext">.pops</span> Position summary
 						</a>
-						<a href="/api/analysis/{analysisId}/output/{popFile}" download={popFile} class="dl-item">
+						<a href={downloadUrls.pop} class="dl-item">
 							<span class="dl-ext">.pop</span> All mutations
 						</a>
-						<a href="/api/analysis/{analysisId}/output/{pdbFile}" download={pdbFile} class="dl-item">
+						<a href={downloadUrls.pdb} class="dl-item">
 							<span class="dl-ext">.pdb</span> Structure file
 						</a>
 					</div>
 				{/if}
 			</div>
-			<a href="{base}/run?tool=popmusic" class="action-btn">New analysis</a>
+			{#if backUrl}
+				<a href={backUrl} class="action-btn">New analysis</a>
+			{/if}
 		</div>
 	</div>
 
