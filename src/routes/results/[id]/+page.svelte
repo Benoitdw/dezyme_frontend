@@ -4,19 +4,16 @@
 	import { onMount } from 'svelte';
 	import { tools } from '$lib/tools';
 	import { getJobStatus, getJobPayload } from '$lib/utils/api';
-	import type { JobPayloadSummary } from '$lib/utils/api';
-	import { parseToolFromId } from '$lib/utils/storage';
-	import type { JobStatus } from '$lib/utils/api';
+	import type { JobPayloadSummary, JobStatus } from '$lib/utils/api';
 	import ProteinPending from '$lib/components/ProteinPending.svelte';
 	import DiffuseSineHorizon from '$lib/components/DiffuseSineHorizon.svelte';
 
 	const analysisId = $page.params.id ?? '';
-	const toolId = parseToolFromId(analysisId);
-	const tool = toolId ? tools[toolId] : null;
 
 	let status = $state<JobStatus>('pending');
 	let error = $state<string | null>(null);
 	let payload = $state<JobPayloadSummary | null>(null);
+	let tool = $derived(payload ? tools[payload.tool] : null);
 	let showPayload = $state(false);
 	let interval: ReturnType<typeof setInterval> | null = null;
 
@@ -34,8 +31,9 @@
 	}
 
 	onMount(() => {
-		if (toolId) document.body.setAttribute('data-tool', toolId);
-		payload = getJobPayload(analysisId);
+		const p = getJobPayload(analysisId);
+		payload = p;
+		if (p) document.body.setAttribute('data-tool', p.tool);
 		poll();
 		interval = setInterval(poll, 3000);
 		return () => {

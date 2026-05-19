@@ -769,6 +769,7 @@
 			onpointerdown={startDrag}
 			role="toolbar"
 			aria-label="Drag to move"
+			tabindex="0"
 		>
 			<span class="float-title">
 				<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">

@@ -43,6 +43,7 @@
 		{@const info = chainInfo[chain]}
 		{@const isSelected = selected.includes(chain)}
 		{@const seq = info?.sequence ?? ''}
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 		<div
 			class="chain-card"
 			class:active={isSelected}

@@ -33,7 +33,7 @@
 	let viewStart = 0;
 	let viewEnd   = 0;
 
-	let isDragging   = false;
+	let isDragging   = $state(false);
 	let dragStartX   = 0;
 	let dragViewStart = 0;
 

@@ -147,7 +147,7 @@
 			</div>
 		{:else}
 			<section class="section">
-				<label class="section-label">Structure</label>
+				<span class="section-label">Structure</span>
 				<PdbInput onLoaded={onPdbLoaded} onError={onPdbError} onBiologicalAssembly={(i) => { biologicalAssembly = i; }} />
 				{#if pdbError}
 					<p class="error">{pdbError}</p>
@@ -156,12 +156,12 @@
 
 			{#if pdbMeta}
 				<section class="section">
-					<label class="section-label">Metadata</label>
+					<span class="section-label">Metadata</span>
 					<PdbMetadata meta={pdbMeta} {selectedChains} accent={tool.accent} />
 				</section>
 
 				<section class="section">
-					<label class="section-label">Chain selection</label>
+					<span class="section-label">Chain selection</span>
 					<ChainSelector
 						chains={pdbMeta.chains}
 						chainRule={tool.chainRule}
@@ -175,7 +175,7 @@
 
 			{#if tool.fields.length > 0}
 				<section class="section">
-					<label class="section-label">Parameters</label>
+					<span class="section-label">Parameters</span>
 					<div class="fields">
 						{#each tool.fields as field}
 							{@const val = fieldValues[field.name] ?? ''}
@@ -220,7 +220,7 @@
 
 			{#if tool.requiresMsa && pdbMeta}
 				<section class="section">
-					<label class="section-label">Multiple Sequence Alignment</label>
+					<span class="section-label">Multiple Sequence Alignment</span>
 					{#key pdbMeta.id}
 						<MsaInput
 							msaUrl={pdbMeta.msaUrl}

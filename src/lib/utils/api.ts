@@ -6,6 +6,7 @@ export interface SubmitPayload {
 	tool: ToolId;
 	structureId: string;
 	chains: string[];
+	biologicalAssembly?: number;
 	pdbContent?: string;
 	msaContent?: string;
 	msaFilename?: string;
@@ -22,6 +23,7 @@ export interface JobPayloadSummary {
 	tool: ToolId;
 	structureId: string;
 	chains: string[];
+	biologicalAssembly?: number;
 	params: Record<string, unknown>;
 	pdb?: { bytes: number };
 	msa?: { filename: string; lines: number; bytes: number };
@@ -50,6 +52,7 @@ export async function submitAnalysis(payload: SubmitPayload): Promise<string> {
 		tool: payload.tool,
 		structureId: payload.structureId,
 		chains: payload.chains,
+		biologicalAssembly: payload.biologicalAssembly,
 		params: payload.params,
 		pdb: payload.pdbContent
 			? { bytes: new TextEncoder().encode(payload.pdbContent).length }
