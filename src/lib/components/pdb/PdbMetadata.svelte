@@ -46,6 +46,11 @@
 	});
 
 	$effect(() => {
+		if (!viewer || !isPdbId) return;
+		viewer.fetch(meta.id);
+	});
+
+	$effect(() => {
 		if (!viewer || meta.chains.length === 0) return;
 		const selectedColor = hexToRgb(accent);
 		const map: Record<string, number[]> = {};
