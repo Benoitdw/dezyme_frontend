@@ -28,6 +28,7 @@
 		meta: PdbMetadata;
 		pdbUrl: string;
 		downloadUrls: { pops: string; pop: string; pdb: string };
+		msaContent: string | null;
 	}
 	let results = $state<Results | null>(null);
 
@@ -42,11 +43,17 @@
 		const pdbFile  = files.find((f) => f.endsWith('.pdb'));
 		if (!popsFile || !popFile || !pdbFile) return;
 
-		const [popsText, popText, pdbText] = await Promise.all([
+		const fetches: Promise<string>[] = [
 			fetch(`${outputBase}/${popsFile}`).then((r) => r.text()),
 			fetch(`${outputBase}/${popFile}`).then((r) => r.text()),
 			fetch(`${outputBase}/${pdbFile}`).then((r) => r.text()),
-		]);
+		];
+
+		const msaFetch = p.msa
+			? fetch(`/api/analysis/${analysisId}/msa`).then((r) => r.ok ? r.text() : null).catch(() => null)
+			: Promise.resolve(null);
+
+		const [popsText, popText, pdbText, msaContent] = await Promise.all([...fetches, msaFetch]);
 
 		const meta = parsePdbFile(pdbText);
 		meta.id = p.structureId;
@@ -61,6 +68,7 @@
 				pop:  `${outputBase}/${popFile}`,
 				pdb:  `${outputBase}/${pdbFile}`,
 			},
+			msaContent: msaContent ?? null,
 		};
 	}
 
@@ -112,6 +120,7 @@
 		subtitle={analysisId}
 		backUrl="/run?tool=popmusic"
 		downloadUrls={results.downloadUrls}
+		msaContent={results.msaContent}
 	/>
 {:else}
 	<div class="page">

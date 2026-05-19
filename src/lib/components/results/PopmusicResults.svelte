@@ -3,6 +3,9 @@
 	import { theme } from '$lib/stores/theme';
 	import PdbMetadata from '$lib/components/pdb/PdbMetadata.svelte';
 	import ProteinViewer from '$lib/components/ProteinViewer.svelte';
+	import MsaViewer from '$lib/components/MsaViewer.svelte';
+	import MutationHeatmap, { ddgColor as hmDdgColor, rsaColor as hmRsaColor } from '$lib/components/MutationHeatmap.svelte';
+	import type { HeatmapRowDef, ColorbarDef } from '$lib/components/MutationHeatmap.svelte';
 	import type { SummaryRow, MutationRow } from '$lib/utils/popmusic';
 	import type { Chart as ChartType } from 'chart.js';
 	import type { PdbMetadata as PdbMeta } from '$lib/utils/pdb';
@@ -19,9 +22,10 @@
 		title?: string;
 		subtitle?: string;
 		backUrl?: string;
+		msaContent?: string | null;
 	}
 
-	let { structureId, summary, mutations, meta, pdbUrl, downloadUrls, title, subtitle, backUrl }: Props = $props();
+	let { structureId, summary, mutations, meta, pdbUrl, downloadUrls, title, subtitle, backUrl, msaContent = null }: Props = $props();
 
 	const displayTitle    = $derived(title    ?? structureId);
 	const displaySubtitle = $derived(subtitle ?? '');
@@ -49,8 +53,115 @@
 		return map;
 	});
 
-	let tab = $state<'summary' | 'mutations'>('summary');
+	let tab = $state<'summary' | 'mutations' | 'msa'>('summary');
 	let selectedResidues = $state(new Set<string>());
+
+	// ── Heatmap data ─────────────────────────────────────────────────────────
+	const AA_ORDER = ['A','C','D','E','F','G','H','I','K','L','M','N','P','Q','R','S','T','V','W','Y'];
+	const AA1_TO_3: Record<string, string> = {
+		A:'ALA',C:'CYS',D:'ASP',E:'GLU',F:'PHE',G:'GLY',H:'HIS',I:'ILE',K:'LYS',L:'LEU',
+		M:'MET',N:'ASN',P:'PRO',Q:'GLN',R:'ARG',S:'SER',T:'THR',V:'VAL',W:'TRP',Y:'TYR'
+	};
+
+	// Sequence-ordered (by chain + resNum) version of the filtered summary for heatmap
+	const hmSummary = $derived.by(() => {
+		const q = search.toLowerCase();
+		const rows = summary.filter(
+			(r) =>
+				chains.includes(r.chain) &&
+				structs.includes(r.secStruct) &&
+				r.avgDdg >= ddgMin && r.avgDdg <= ddgMax &&
+				(!q || r.resName.toLowerCase().includes(q))
+		);
+		return [...rows].sort((a, b) => a.chain.localeCompare(b.chain) || a.resNum - b.resNum);
+	});
+
+	// Gap-filled slot list: every integer residue number between min and max per chain,
+	// with null for positions absent from the popmusic output (HETATM, missing density, etc.)
+	const hmSlots = $derived.by(() => {
+		const byChain = new Map<string, SummaryRow[]>();
+		for (const r of hmSummary) {
+			if (!byChain.has(r.chain)) byChain.set(r.chain, []);
+			byChain.get(r.chain)!.push(r);
+		}
+		const positions: string[] = [];
+		const slots: (SummaryRow | null)[] = [];
+		for (const chain of [...byChain.keys()].sort()) {
+			const rows = byChain.get(chain)!;
+			const minRes = rows[0].resNum;
+			const maxRes = rows[rows.length - 1].resNum;
+			const byNum = new Map(rows.map((r) => [r.resNum, r]));
+			for (let num = minRes; num <= maxRes; num++) {
+				positions.push(`${chain}${num}`);
+				slots.push(byNum.get(num) ?? null);
+			}
+		}
+		return { positions, slots };
+	});
+
+	const hmPositions = $derived(hmSlots.positions);
+
+	// Map posKey → (mutRes3 → ddg) for fast lookup
+	const mutByPosAA = $derived.by(() => {
+		const map = new Map<string, Map<string, number>>();
+		for (const m of mutations) {
+			const key = `${m.chain}-${m.resNum}`;
+			if (!map.has(key)) map.set(key, new Map());
+			map.get(key)!.set(m.mutRes, m.ddg);
+		}
+		return map;
+	});
+
+	const hmHeaderRows = $derived<HeatmapRowDef[]>([
+		{
+			label: 'RSA',
+			values: hmSlots.slots.map((r) => r?.accessibility ?? null),
+			colorFn: hmRsaColor,
+			vmin: 0, vmax: 100,
+			fmt: (v) => v.toFixed(0),
+		},
+		{
+			label: 'Mean',
+			values: hmSlots.slots.map((r) => r?.avgDdg ?? null),
+			colorFn: hmDdgColor,
+			fmt: (v) => v.toFixed(2),
+		},
+	]);
+
+	const hmDataRows = $derived<HeatmapRowDef[]>(
+		AA_ORDER.map((aa1) => {
+			const aa3 = AA1_TO_3[aa1];
+			return {
+				label: aa1,
+				values: hmSlots.slots.map((r) => {
+					if (!r) return null; // gap position
+					if (r.resName === aa3) return null; // wild-type
+					const posKey = `${r.chain}-${r.resNum}`;
+					return mutByPosAA.get(posKey)?.get(aa3) ?? null;
+				}),
+				colorFn: hmDdgColor,
+				fmt: (v) => v.toFixed(2),
+			};
+		})
+	);
+
+	// Column indices that are structural gaps (no popmusic data)
+	const hmGapIndices = $derived(
+		new Set(
+			hmSlots.slots
+				.map((s, i) => (s === null ? i : -1))
+				.filter((i) => i >= 0)
+		)
+	);
+
+	// Shared ΔΔG colorbar for data rows
+	const hmColorbar = $derived<ColorbarDef>({
+		label: 'ΔΔG (kcal/mol)',
+		vmin: Math.max(-5, Math.floor(Math.min(...mutations.map((m) => m.ddg)) * 10) / 10),
+		vmax: Math.min(5,  Math.ceil( Math.max(...mutations.map((m) => m.ddg)) * 10) / 10),
+		colorFn: hmDdgColor,
+		fmt: (v) => (v > 0 ? '+' : '') + v.toFixed(1),
+	});
 	function toggleResidue(key: string) {
 		const next = new Set(selectedResidues);
 		if (next.has(key)) next.delete(key); else next.add(key);
@@ -336,6 +447,11 @@
 		<button class="tab" class:active={tab === 'mutations'} onclick={() => (tab = 'mutations')}>
 			All mutations <span class="tab-count">{filteredMutations.length}</span>
 		</button>
+		{#if msaContent}
+			<button class="tab" class:active={tab === 'msa'} onclick={() => (tab = 'msa')}>
+				MSA
+			</button>
+		{/if}
 		<div class="tabs-spacer"></div>
 		<button class="tab-3d" class:tab-3d-active={showViewer} onclick={() => (showViewer = !showViewer)}>
 			<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -478,34 +594,27 @@
 
 	<!-- Mutations tab -->
 	{#if tab === 'mutations'}
-		<div class="table-wrap">
-			<table class="data-table">
-				<thead>
-					<tr>
-						<th>Position</th>
-						<th>Mutation</th>
-						<th>Sec. Structure</th>
-						<th class="num">RSA</th>
-						<th class="num sortable" onclick={() => (sortDir = sortDir === 1 ? -1 : 1)}>
-							ΔΔG (kcal/mol) <span class="sort-arrow">{sortDir === 1 ? '↑' : '↓'}</span>
-						</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each filteredMutations as mut (`${mut.chain}-${mut.resNum}-${mut.mutRes}`)}
-						<tr>
-							<td class="pos-cell mono">{mut.chain}{mut.resNum}</td>
-							<td class="mut-cell">{mut.wtRes} → {mut.mutRes}</td>
-							<td><span class="ss-badge ss-{mut.secStruct}">{SS_LABELS[mut.secStruct] ?? mut.secStruct}</span></td>
-							<td class="num">{mut.accessibility.toFixed(1)}%</td>
-							<td class="num"><span class="ddg-pill {ddgClass(mut.ddg)}">{mut.ddg > 0 ? '+' : ''}{mut.ddg.toFixed(2)}</span></td>
-						</tr>
-					{/each}
-					{#if filteredMutations.length === 0}
-						<tr><td colspan="5" class="empty-cell">No mutations match the current filters</td></tr>
-					{/if}
-				</tbody>
-			</table>
+		<div class="heatmap-section">
+			<div class="heatmap-card">
+				<div class="heatmap-card-header">
+					<span class="heatmap-title">Mutation effect map</span>
+					<span class="heatmap-sub">ΔΔG (kcal/mol) per position and amino acid substitution — red = destabilizing, blue = stabilizing</span>
+				</div>
+				<MutationHeatmap
+					positions={hmPositions}
+					headerRows={hmHeaderRows}
+					dataRows={hmDataRows}
+					colorbar={hmColorbar}
+					gapIndices={hmGapIndices}
+				/>
+			</div>
+		</div>
+	{/if}
+
+	<!-- MSA tab -->
+	{#if tab === 'msa' && msaContent}
+		<div class="msa-section">
+			<MsaViewer msaContent={msaContent} />
 		</div>
 	{/if}
 </div>
@@ -669,4 +778,14 @@
 	@media (max-width: 600px) { .charts-grid { grid-template-columns: 1fr; } .charts-grid .chart-card:first-child { grid-column: auto; } }
 	@media (max-width: 768px) { .page { padding: 1.5rem 1rem; } .bar-row { grid-template-columns: 48px 40px 1fr 56px; gap: 0.35rem; } .filter-label { min-width: 50px; } }
 	@media (max-width: 480px) { .header { flex-direction: column; } .tabs { overflow-x: auto; } }
+
+	/* Heatmap section */
+	.heatmap-section { display: flex; flex-direction: column; gap: 1rem; }
+	.heatmap-card { background: var(--surface); border: 1px solid var(--border); border-radius: 0.875rem; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; }
+	.heatmap-card-header { display: flex; flex-direction: column; gap: 0.2rem; }
+	.heatmap-title { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+	.heatmap-sub { font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; }
+
+	/* MSA section */
+	.msa-section { background: var(--surface); border: 1px solid var(--border); border-radius: 0.875rem; padding: 1.25rem; overflow-x: auto; }
 </style>
