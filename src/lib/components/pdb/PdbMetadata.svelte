@@ -14,8 +14,13 @@
 
 	let viewerEl = $state<HTMLAnchorElement | undefined>();
 	let viewer = $state<any>(null);
-	const isPdbId = $derived(/^[A-Z0-9]{4}$/.test(meta.id));
+	const hasContent = $derived(!!meta.pdbContent);
 	const viewerId = `lp-${Math.random().toString(36).slice(2)}`;
+
+	const isPdbId   = $derived(/^[A-Z0-9]{4}$/.test(meta.id));
+	const afMatch   = $derived(meta.id.match(/^AF-(.+)-F\d+$/));
+	const rcsbUrl   = $derived(isPdbId ? `https://www.rcsb.org/structure/${meta.id}` : null);
+	const afUrl     = $derived(afMatch ? `https://alphafold.ebi.ac.uk/entry/${afMatch[1]}` : null);
 
 	const DIMMED_COLOR = [140, 140, 150];
 
@@ -25,14 +30,14 @@
 	}
 
 	onMount(() => {
-		if (!isPdbId) return;
+		if (!hasContent) return;
 
 		function initViewer() {
 			const lp = (window as any).LittleProteinStarter;
 			viewer = lp.start(`#${viewerId}`, 180, 180, {
 				backgroundColor: getBgColor()
 			});
-			viewer.fetch(meta.id);
+			viewer.fromString(meta.pdbContent, meta.id);
 		}
 
 		if ((window as any).LittleProteinStarter) {
@@ -46,8 +51,8 @@
 	});
 
 	$effect(() => {
-		if (!viewer || !isPdbId) return;
-		viewer.fetch(meta.id);
+		if (!viewer || !meta.pdbContent) return;
+		viewer.fromString(meta.pdbContent, meta.id);
 	});
 
 	$effect(() => {
@@ -85,13 +90,26 @@
 			<span class="meta-label">Structure</span>
 			<span class="meta-value">{meta.id}</span>
 		</div>
+		{#if rcsbUrl || afUrl}
+			<div class="meta-row">
+				<span class="meta-label">Links</span>
+				<span class="meta-value meta-value--links">
+					{#if rcsbUrl}
+						<a href={rcsbUrl} target="_blank" rel="noopener noreferrer" class="ext-link">RCSB</a>
+					{/if}
+					{#if afUrl}
+						<a href={afUrl} target="_blank" rel="noopener noreferrer" class="ext-link">AlphaFold</a>
+					{/if}
+				</span>
+			</div>
+		{/if}
 		<div class="meta-row">
 			<span class="meta-label">Name</span>
 			<span class="meta-value meta-value--name">{meta.name}</span>
 		</div>
 		{#if meta.experimentType}
 			<div class="meta-row">
-				<span class="meta-label">Type</span>
+				<span class="meta-label">Method</span>
 				<span class="meta-value">{meta.experimentType}</span>
 			</div>
 		{/if}
@@ -131,7 +149,7 @@
 		{/if}
 	</div>
 
-	{#if isPdbId}
+	{#if hasContent}
 		<a
 			class="viewer-wrap"
 			bind:this={viewerEl}
@@ -191,6 +209,29 @@
 		overflow: visible;
 		text-overflow: unset;
 		line-height: 1.4;
+	}
+
+	.meta-value--links {
+		font-family: inherit;
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.ext-link {
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		border: 1px solid var(--border);
+		border-radius: 0.3rem;
+		padding: 0.1rem 0.4rem;
+		text-decoration: none;
+		transition: color 0.15s, border-color 0.15s;
+		white-space: nowrap;
+	}
+
+	.ext-link:hover {
+		color: var(--text);
+		border-color: var(--text-muted);
 	}
 
 	.viewer-wrap {

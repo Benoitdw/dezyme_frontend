@@ -43,13 +43,15 @@
 		{@const info = chainInfo[chain]}
 		{@const isSelected = selected.includes(chain)}
 		{@const seq = info?.sequence ?? ''}
-		<button
+		<div
 			class="chain-card"
 			class:active={isSelected}
 			style="--accent: {accent}"
 			onclick={() => toggle(chain)}
-			type="button"
-			aria-pressed={isSelected}
+			onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(chain); } }}
+			role={chainRule.multiple ? 'checkbox' : 'radio'}
+			aria-checked={isSelected}
+			tabindex="0"
 		>
 			<div class="card-top">
 				<div class="card-top-left">
@@ -81,7 +83,7 @@
 			{#if seq}
 				<span class="chain-seq">{formatSeq(seq)}</span>
 			{/if}
-		</button>
+		</div>
 	{/each}
 </div>
 
@@ -107,6 +109,13 @@
 		flex-direction: column;
 		gap: 0.4rem;
 		min-width: 0;
+		box-sizing: border-box;
+		user-select: none;
+	}
+
+	.chain-card:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 
 	.chain-card:hover:not(.active) {

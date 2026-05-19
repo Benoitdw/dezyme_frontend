@@ -18,6 +18,7 @@ export interface PdbMetadata {
 	ligandCount?: number;
 	residues?: Record<string, string>;  // "A2" → "ALA" (chain+resNum → 3-letter AA)
 	chainInfo?: Record<string, ChainInfo>;
+	pdbContent?: string;  // raw PDB file content for LittleProtein
 }
 
 // Standard + common modified residues found in PDB files
@@ -56,27 +57,53 @@ function parseResidueMap(atomLines: Iterable<string>): Record<string, string> {
 	return map;
 }
 
+// Returns chain → ordered list of 3-letter residue names from SEQRES records
+function parseSeqres(lines: string[]): Record<string, string[]> {
+	const byChain: Record<string, string[]> = {};
+	for (const l of lines) {
+		if (!l.startsWith('SEQRES')) continue;
+		const chain = l[11]?.trim();
+		if (!chain) continue;
+		if (!byChain[chain]) byChain[chain] = [];
+		// residues start at col 19, 4 chars each (3-letter + space), up to 13 per line
+		for (let i = 19; i + 2 < l.length; i += 4) {
+			const res = l.slice(i, i + 3).trim();
+			if (res) byChain[chain].push(res);
+		}
+	}
+	return byChain;
+}
+
 function buildChainInfo(
 	residues: Record<string, string>,
-	names: Record<string, string> = {}
+	names: Record<string, string> = {},
+	seqres: Record<string, string[]> = {}
 ): Record<string, ChainInfo> {
-	const byChain: Record<string, Array<{ num: number; aa: string }>> = {};
-
+	// Build ATOM-based map as fallback
+	const atomByChain: Record<string, Array<{ num: number; aa: string }>> = {};
 	for (const [key, resName] of Object.entries(residues)) {
 		const chain = key[0];
 		const num = parseInt(key.slice(1), 10);
-		if (!byChain[chain]) byChain[chain] = [];
-		byChain[chain].push({ num, aa: AA3TO1[resName] ?? 'X' });
+		if (!atomByChain[chain]) atomByChain[chain] = [];
+		atomByChain[chain].push({ num, aa: AA3TO1[resName] ?? 'X' });
 	}
 
+	const allChains = new Set([...Object.keys(seqres), ...Object.keys(atomByChain)]);
 	const result: Record<string, ChainInfo> = {};
-	for (const [chain, entries] of Object.entries(byChain)) {
-		entries.sort((a, b) => a.num - b.num);
-		result[chain] = {
-			name: names[chain],
-			length: entries.length,
-			sequence: entries.map((r) => r.aa).join(''),
-		};
+
+	for (const chain of allChains) {
+		const sr = seqres[chain];
+		if (sr && sr.length > 0) {
+			const sequence = sr.map((r) => AA3TO1[r] ?? 'X').join('');
+			result[chain] = { name: names[chain], length: sr.length, sequence };
+		} else {
+			const entries = (atomByChain[chain] ?? []).sort((a, b) => a.num - b.num);
+			result[chain] = {
+				name: names[chain],
+				length: entries.length,
+				sequence: entries.map((r) => r.aa).join(''),
+			};
+		}
 	}
 	return result;
 }
@@ -137,12 +164,14 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 
 		let residues: Record<string, string> | undefined;
 		let chainInfo: Record<string, ChainInfo> | undefined;
+		let pdbContent: string | undefined;
 		try {
 			const pdbFile = await fetch(`https://files.rcsb.org/download/${id}.pdb`);
 			if (pdbFile.ok) {
-				const text = await pdbFile.text();
-				residues = parseResidueMap(text.split('\n'));
-				chainInfo = buildChainInfo(residues, chainNames);
+				pdbContent = await pdbFile.text();
+				const lines = pdbContent.split('\n');
+				residues = parseResidueMap(lines);
+				chainInfo = buildChainInfo(residues, chainNames, parseSeqres(lines));
 			}
 		} catch { /* non-blocking */ }
 
@@ -165,17 +194,42 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 			ligandCount:  Math.max(0, nonPolymerCount - solventCount),
 			residues,
 			chainInfo,
+			pdbContent,
 		};
 	}
 
 	if (type === 'uniprot') {
-		const afId = `AF-${id}-F1`;
+		const uniprotId = id;
+		const afId = `AF-${uniprotId}-F1`;
+
+		const apiRes = await fetch(`https://alphafold.ebi.ac.uk/api/prediction/${uniprotId}`);
+		if (!apiRes.ok) throw new Error(`AlphaFold entry ${uniprotId} not found`);
+		const afData = (await apiRes.json())[0];
+		const pdbUrl: string = afData.pdbUrl;
+		const organism: string | undefined = afData.organism ?? afData.scientificName;
+
+		let pdbContent: string | undefined;
+		let residues: Record<string, string> | undefined;
+		let chainInfo: Record<string, ChainInfo> | undefined;
+		try {
+			const afFile = await fetch(pdbUrl);
+			if (afFile.ok) {
+				pdbContent = await afFile.text();
+				const lines = pdbContent.split('\n');
+				residues = parseResidueMap(lines);
+				chainInfo = buildChainInfo(residues, {}, parseSeqres(lines));
+			}
+		} catch { /* non-blocking */ }
+
 		return {
 			id: afId,
-			name: `AlphaFold model for ${id}`,
-			chains: ['A'],
-			organism: undefined,
+			name: `AlphaFold model for ${uniprotId}`,
+			chains: chainInfo ? Object.keys(chainInfo).sort() : ['A'],
+			organism,
 			experimentType: 'Predicted',
+			residues,
+			chainInfo,
+			pdbContent,
 		};
 	}
 
@@ -217,6 +271,7 @@ export function parsePdbFile(content: string): PdbMetadata {
 	}
 
 	const residues = parseResidueMap(lines);
+	const seqres   = parseSeqres(lines);
 
 	return {
 		id: 'custom',
@@ -226,6 +281,7 @@ export function parsePdbFile(content: string): PdbMetadata {
 		residueCount: residueKeys.size || undefined,
 		ligandCount:  ligandKeys.size || undefined,
 		residues,
-		chainInfo: buildChainInfo(residues),
+		chainInfo: buildChainInfo(residues, {}, seqres),
+		pdbContent: content,
 	};
 }
