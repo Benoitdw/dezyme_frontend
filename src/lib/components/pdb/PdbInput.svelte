@@ -5,14 +5,17 @@
 	interface Props {
 		onLoaded: (meta: PdbMetadata, rawContent?: string) => void;
 		onError: (msg: string) => void;
+		onBiologicalAssembly?: (index: number | null) => void;
 	}
 
-	let { onLoaded, onError }: Props = $props();
+	let { onLoaded, onError, onBiologicalAssembly }: Props = $props();
 
 	let inputValue = $state('3BIO');
 	let detectedType = $derived(inputValue.trim().length >= 4 ? detectInputType(inputValue) : null);
 	let loading = $state(false);
 	let dragging = $state(false);
+	let loadedMeta = $state<PdbMetadata | null>(null);
+	let selectedAssembly = $state<number | null>(null);  // null = asymmetric unit
 
 	const typeLabel: Record<string, string> = {
 		'pdb-id': 'PDB ID detected',
@@ -23,8 +26,12 @@
 	async function fetchStructure() {
 		if (!detectedType || detectedType === 'unknown') return;
 		loading = true;
+		loadedMeta = null;
+		selectedAssembly = null;
+		onBiologicalAssembly?.(null);
 		try {
 			const meta = await fetchPdbMetadata(inputValue.trim(), detectedType);
+			loadedMeta = meta;
 			onLoaded(meta);
 		} catch (e) {
 			onError(e instanceof Error ? e.message : 'Failed to fetch structure');
@@ -43,12 +50,20 @@
 			const content = e.target?.result as string;
 			try {
 				const meta = parsePdbFile(content);
+				loadedMeta = meta;
+				selectedAssembly = null;
+				onBiologicalAssembly?.(null);
 				onLoaded(meta, content);
 			} catch {
 				onError('Failed to parse PDB file');
 			}
 		};
 		reader.readAsText(file);
+	}
+
+	function selectAssembly(index: number | null) {
+		selectedAssembly = index;
+		onBiologicalAssembly?.(index);
 	}
 
 	function handleDrop(e: DragEvent) {
@@ -90,6 +105,36 @@
 		</button>
 	</div>
 
+	{#if loadedMeta?.biologicalAssemblyCount}
+		<div class="bio-unit-row">
+			<div class="bio-unit-header">
+				<span class="bio-unit-label">Biological unit</span>
+				<span class="info-icon">ℹ<span class="tooltip">
+					X-ray structures are deposited as an <strong>asymmetric unit</strong>, which may contain
+					multiple copies or only part of the functional complex. <strong>Biological assemblies</strong>
+					are the author-defined functional form. Chain selection always reflects the asymmetric unit;
+					the chosen unit is what gets sent for score computation.
+				</span></span>
+			</div>
+			<div class="bio-unit-options">
+				<button
+					class="unit-btn"
+					class:active={selectedAssembly === null}
+					onclick={() => selectAssembly(null)}
+					type="button"
+				>Asymmetric unit</button>
+				{#each Array.from({ length: loadedMeta.biologicalAssemblyCount }, (_, i) => i + 1) as i}
+					<button
+						class="unit-btn"
+						class:active={selectedAssembly === i}
+						onclick={() => selectAssembly(i)}
+						type="button"
+					>Assembly {i}</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
 	<div class="divider"><span>or</span></div>
 
 	<label
@@ -99,9 +144,9 @@
 		ondragleave={() => { dragging = false; }}
 		ondrop={handleDrop}
 	>
-		<input type="file" accept=".pdb" onchange={handleFileInput} class="file-input" />
+		<input type="file" onchange={handleFileInput} class="file-input" />
 		<span class="drop-text">Drop your PDB file here</span>
-		<span class="browse-hint">or <u>browse</u></span>
+		<span class="browse-hint"><code>.pdb</code> or biological unit (<code>.pdb1</code>, <code>.pdb2</code>, …) &nbsp;·&nbsp; <u>browse</u></span>
 	</label>
 </div>
 
@@ -219,5 +264,109 @@
 	.browse-hint {
 		font-size: 0.8rem;
 		color: var(--text-muted);
+	}
+
+	.bio-unit-row {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+
+	.bio-unit-header {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+
+	.bio-unit-label {
+		font-size: 0.75rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--text-muted);
+	}
+
+	.info-icon {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1rem;
+		height: 1rem;
+		font-size: 0.65rem;
+		border-radius: 50%;
+		border: 1px solid var(--border);
+		color: var(--text-muted);
+		cursor: default;
+		flex-shrink: 0;
+		user-select: none;
+	}
+
+	.info-icon:hover {
+		border-color: var(--text-muted);
+		color: var(--text);
+	}
+
+	.info-icon .tooltip {
+		display: none;
+		position: absolute;
+		left: 50%;
+		bottom: calc(100% + 0.5rem);
+		transform: translateX(-50%);
+		width: 22rem;
+		max-width: calc(100vw - 2rem);
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 0.5rem;
+		padding: 0.65rem 0.8rem;
+		font-size: 0.78rem;
+		font-weight: 400;
+		text-transform: none;
+		letter-spacing: 0;
+		line-height: 1.5;
+		color: var(--text-muted);
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+		pointer-events: none;
+		z-index: 100;
+		white-space: normal;
+	}
+
+	.info-icon .tooltip strong {
+		color: var(--text);
+		font-weight: 600;
+	}
+
+	.info-icon:hover .tooltip {
+		display: block;
+	}
+
+	.bio-unit-options {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+	}
+
+	.unit-btn {
+		background: var(--bg);
+		border: 1px solid var(--border);
+		border-radius: 0.4rem;
+		padding: 0.35rem 0.75rem;
+		font-size: 0.8rem;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: border-color 0.15s, color 0.15s, background 0.15s;
+		white-space: nowrap;
+	}
+
+	.unit-btn:hover {
+		border-color: var(--text-muted);
+		color: var(--text);
+	}
+
+	.unit-btn.active {
+		border-color: var(--text-muted);
+		color: var(--text);
+		background: var(--surface);
+		font-weight: 600;
 	}
 </style>

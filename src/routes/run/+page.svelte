@@ -26,6 +26,7 @@
 	let mutations = $state<string[] | null>(null);  // null = systematic
 	let msaContent = $state<string | null>(null);
 	let msaFilename = $state<string | null>(null);
+	let biologicalAssembly = $state<number | null>(null);
 
 
 	function validateField(name: string, raw: string) {
@@ -76,9 +77,9 @@
 		pdbMeta = meta;
 		pdbError = null;
 		selectedChains = tool.chainRule.preselect(meta.chains);
-		// Clear MSA when structure changes
 		msaContent = null;
 		msaFilename = null;
+		biologicalAssembly = null;
 	}
 
 	function onPdbError(msg: string) {
@@ -95,6 +96,7 @@
 				tool: selectedTool,
 				structureId: pdbMeta.id,
 				chains: selectedChains,
+				biologicalAssembly: biologicalAssembly ?? undefined,
 				pdbContent: pdbMeta.pdbContent,
 				msaContent: msaContent ?? undefined,
 				msaFilename: msaFilename ?? undefined,
@@ -146,7 +148,7 @@
 		{:else}
 			<section class="section">
 				<label class="section-label">Structure</label>
-				<PdbInput onLoaded={onPdbLoaded} onError={onPdbError} />
+				<PdbInput onLoaded={onPdbLoaded} onError={onPdbError} onBiologicalAssembly={(i) => { biologicalAssembly = i; }} />
 				{#if pdbError}
 					<p class="error">{pdbError}</p>
 				{/if}

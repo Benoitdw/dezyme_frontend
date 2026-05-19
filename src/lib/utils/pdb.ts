@@ -20,6 +20,7 @@ export interface PdbMetadata {
 	chainInfo?: Record<string, ChainInfo>;
 	pdbContent?: string;  // raw PDB file content for LittleProtein
 	msaUrl?: string;      // AlphaFold MSA download URL (versioned)
+	biologicalAssemblyCount?: number;
 }
 
 // Standard + common modified residues found in PDB files
@@ -140,6 +141,7 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 		const data = await res.json();
 
 		const entityIds: string[] = data.rcsb_entry_container_identifiers?.polymer_entity_ids ?? [];
+		const assemblyIds: string[] = data.rcsb_entry_container_identifiers?.assembly_ids ?? [];
 		const entityResponses = await Promise.all(
 			entityIds.map((eid: string) =>
 				fetch(`https://data.rcsb.org/rest/v1/core/polymer_entity/${id}/${eid}`).then((r) =>
@@ -196,6 +198,7 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 			residues,
 			chainInfo,
 			pdbContent,
+			biologicalAssemblyCount: assemblyIds.length || undefined,
 		};
 	}
 
