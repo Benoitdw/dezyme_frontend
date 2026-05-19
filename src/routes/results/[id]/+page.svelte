@@ -3,7 +3,8 @@
 	import { base } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { tools } from '$lib/tools';
-	import { getJobStatus } from '$lib/utils/api';
+	import { getJobStatus, getJobPayload } from '$lib/utils/api';
+	import type { JobPayloadSummary } from '$lib/utils/api';
 	import { parseToolFromId } from '$lib/utils/storage';
 	import type { JobStatus } from '$lib/utils/api';
 	import ProteinPending from '$lib/components/ProteinPending.svelte';
@@ -15,6 +16,8 @@
 
 	let status = $state<JobStatus>('pending');
 	let error = $state<string | null>(null);
+	let payload = $state<JobPayloadSummary | null>(null);
+	let showPayload = $state(false);
 	let interval: ReturnType<typeof setInterval> | null = null;
 
 	async function poll() {
@@ -32,6 +35,7 @@
 
 	onMount(() => {
 		if (toolId) document.body.setAttribute('data-tool', toolId);
+		payload = getJobPayload(analysisId);
 		poll();
 		interval = setInterval(poll, 3000);
 		return () => {
@@ -73,6 +77,53 @@
 		</div>
 	{:else}
 		<ProteinPending label={status === 'running' ? 'Running…' : 'Pending…'} />
+
+		{#if payload}
+			<div class="payload-section">
+				<button
+					class="payload-toggle"
+					onclick={() => { showPayload = !showPayload; }}
+					type="button"
+				>
+					{showPayload ? 'Hide' : 'View'} submitted payload
+				</button>
+
+				{#if showPayload}
+					<div class="payload-card">
+						<div class="payload-row">
+							<span class="payload-key">tool</span>
+							<span class="payload-val">{payload.tool}</span>
+						</div>
+						<div class="payload-row">
+							<span class="payload-key">structure</span>
+							<span class="payload-val">{payload.structureId}</span>
+						</div>
+						<div class="payload-row">
+							<span class="payload-key">chains</span>
+							<span class="payload-val">{payload.chains.join(', ')}</span>
+						</div>
+						{#if payload.pdb}
+							<div class="payload-row">
+								<span class="payload-key">pdb</span>
+								<span class="payload-val">{(payload.pdb.bytes / 1024).toFixed(1)} KB</span>
+							</div>
+						{/if}
+						{#if payload.msa}
+							<div class="payload-row">
+								<span class="payload-key">msa</span>
+								<span class="payload-val">{payload.msa.filename} — {payload.msa.lines.toLocaleString()} lines, {(payload.msa.bytes / 1024).toFixed(1)} KB</span>
+							</div>
+						{/if}
+						{#if Object.keys(payload.params).length > 0}
+							<div class="payload-row">
+								<span class="payload-key">params</span>
+								<span class="payload-val">{JSON.stringify(payload.params)}</span>
+							</div>
+						{/if}
+					</div>
+				{/if}
+			</div>
+		{/if}
 	{/if}
 </div>
 
@@ -179,5 +230,58 @@
 	.placeholder {
 		color: var(--text-muted);
 		font-size: 0.95rem;
+	}
+
+	.payload-section {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		align-items: flex-start;
+	}
+
+	.payload-toggle {
+		background: none;
+		border: 1px solid var(--border);
+		border-radius: 0.5rem;
+		padding: 0.4rem 0.875rem;
+		font-size: 0.82rem;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: border-color 0.15s, color 0.15s;
+	}
+
+	.payload-toggle:hover {
+		border-color: var(--text-muted);
+		color: var(--text);
+	}
+
+	.payload-card {
+		width: 100%;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 0.75rem;
+		padding: 1rem 1.25rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.payload-row {
+		display: flex;
+		gap: 1rem;
+		font-size: 0.82rem;
+	}
+
+	.payload-key {
+		color: var(--text-muted);
+		font-family: monospace;
+		min-width: 80px;
+		flex-shrink: 0;
+	}
+
+	.payload-val {
+		color: var(--text);
+		font-family: monospace;
+		word-break: break-all;
 	}
 </style>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import FileDropzone from '$lib/components/FileDropzone.svelte';
+	import MsaViewer from '$lib/components/MsaViewer.svelte';
 
 	const MMSEQS2_URL = 'https://api.colabfold.com';
 	const POLL_INTERVAL_MS = 5000;
@@ -21,6 +22,7 @@
 	let status = $state('');            // human-readable progress label
 	let error  = $state<string | null>(null);
 	let loaded = $state<{ filename: string; lines: number; content: string } | null>(null);
+	let showPreview = $state(false);
 
 	const afFilename = $derived(msaUrl ? (msaUrl.split('/').at(-1) ?? 'msa.a3m') : null);
 	const busy = $derived(stage !== 'idle' && stage !== 'done' && stage !== 'error');
@@ -167,6 +169,7 @@
 		error = null;
 		stage = 'idle';
 		status = '';
+		showPreview = false;
 		onClear();
 	}
 
@@ -183,10 +186,20 @@
 				<span class="fetch-sub">{loaded.lines.toLocaleString()} lines</span>
 			</div>
 			<div class="loaded-actions">
+				<button
+					class="action-btn"
+					class:action-btn--active={showPreview}
+					onclick={() => { showPreview = !showPreview; }}
+					type="button"
+				>Preview</button>
 				<button class="action-btn" onclick={download} type="button">Download</button>
 				<button class="action-btn action-btn--muted" onclick={clear} type="button">Remove</button>
 			</div>
 		</div>
+
+		{#if showPreview}
+			<MsaViewer msaContent={loaded.content} />
+		{/if}
 	{:else}
 		{#if msaUrl}
 			<div class="fetch-row">
@@ -297,6 +310,11 @@
 
 	.action-btn--muted {
 		color: var(--text-muted);
+	}
+
+	.action-btn--active {
+		border-color: var(--text-muted);
+		background: var(--surface);
 	}
 
 	.fetch-error {

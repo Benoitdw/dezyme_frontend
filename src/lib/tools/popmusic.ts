@@ -10,6 +10,7 @@ export const popmusic: ToolConfig = {
 		multiple: false
 	},
 	fields: [],
+	requiresMsa: true,
 	description:
 		'PopMuSiC predicts the thermodynamic stability change (ΔΔG) upon single amino acid substitutions in proteins. It uses a combination of statistical potentials and machine learning trained on a large dataset of experimental measurements.',
 	tags: ['thermodynamic stability', 'ΔΔG', 'single mutations', 'machine learning'],

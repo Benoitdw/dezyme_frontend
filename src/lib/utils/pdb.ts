@@ -19,6 +19,7 @@ export interface PdbMetadata {
 	residues?: Record<string, string>;  // "A2" → "ALA" (chain+resNum → 3-letter AA)
 	chainInfo?: Record<string, ChainInfo>;
 	pdbContent?: string;  // raw PDB file content for LittleProtein
+	msaUrl?: string;      // AlphaFold MSA download URL (versioned)
 }
 
 // Standard + common modified residues found in PDB files
@@ -206,6 +207,7 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 		if (!apiRes.ok) throw new Error(`AlphaFold entry ${uniprotId} not found`);
 		const afData = (await apiRes.json())[0];
 		const pdbUrl: string = afData.pdbUrl;
+		const msaUrl: string | undefined = afData.msaUrl;
 		const organism: string | undefined = afData.organism ?? afData.scientificName;
 
 		let pdbContent: string | undefined;
@@ -230,6 +232,7 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 			residues,
 			chainInfo,
 			pdbContent,
+			msaUrl,
 		};
 	}
 

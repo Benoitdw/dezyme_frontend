@@ -12,6 +12,7 @@
 	import type { PdbMetadata as PdbMeta } from '$lib/utils/pdb';
 	import SoftIdCard from '$lib/components/SoftIdCard.svelte';
 	import MutationList from '$lib/components/MutationList.svelte';
+	import MsaInput from '$lib/components/MsaInput.svelte';
 	import DiffuseSineHorizon from '$lib/components/DiffuseSineHorizon.svelte';
 
 	let selectedTool = $state<ToolId>(($page.url.searchParams.get('tool') as ToolId) ?? 'popmusic');
@@ -23,6 +24,9 @@
 	let fieldValues = $state<Record<string, string>>({});
 	let fieldErrors = $state<Record<string, string>>({});
 	let mutations = $state<string[] | null>(null);  // null = systematic
+	let msaContent = $state<string | null>(null);
+	let msaFilename = $state<string | null>(null);
+
 
 	function validateField(name: string, raw: string) {
 		const field = tool.fields.find((f) => f.name === name);
@@ -72,6 +76,9 @@
 		pdbMeta = meta;
 		pdbError = null;
 		selectedChains = tool.chainRule.preselect(meta.chains);
+		// Clear MSA when structure changes
+		msaContent = null;
+		msaFilename = null;
 	}
 
 	function onPdbError(msg: string) {
@@ -88,6 +95,9 @@
 				tool: selectedTool,
 				structureId: pdbMeta.id,
 				chains: selectedChains,
+				pdbContent: pdbMeta.pdbContent,
+				msaContent: msaContent ?? undefined,
+				msaFilename: msaFilename ?? undefined,
 				params: { ...fieldValues, ...(mutations !== null ? { mutations: mutations.join(',') } : {}) }
 			});
 			addJob({ id, tool: selectedTool, structureId: pdbMeta.id });
@@ -206,6 +216,21 @@
 				</section>
 			{/if}
 
+			{#if tool.requiresMsa && pdbMeta}
+				<section class="section">
+					<label class="section-label">Multiple Sequence Alignment</label>
+					{#key pdbMeta.id}
+						<MsaInput
+							msaUrl={pdbMeta.msaUrl}
+							chainSequence={pdbMeta.msaUrl ? undefined : pdbMeta.chainInfo?.[selectedChains[0]]?.sequence}
+							queryName="{pdbMeta.id}_{selectedChains[0] ?? 'A'}"
+							onLoaded={(content, filename) => { msaContent = content; msaFilename = filename; }}
+							onClear={() => { msaContent = null; msaFilename = null; }}
+						/>
+					{/key}
+				</section>
+			{/if}
+
 			{#if tool.mutationList && pdbMeta}
 				<section class="section">
 					<span class="section-label">Mutations</span>
@@ -220,7 +245,7 @@
 				class="submit-btn"
 				style="--accent: {tool.accent}"
 				onclick={handleSubmit}
-				disabled={!pdbMeta || selectedChains.length === 0 || submitting || hasFieldErrors}
+				disabled={!pdbMeta || selectedChains.length === 0 || submitting || hasFieldErrors || (tool.requiresMsa && !msaContent)}
 				type="button"
 			>
 				{submitting ? 'Submitting...' : `Run ${tool.name}`}

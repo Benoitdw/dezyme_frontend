@@ -28,6 +28,7 @@ export interface ToolConfig {
 	chainRule: ChainRule;
 	fields: ToolField[];
 	mutationList?: boolean;  // supports custom mutation selection (vs systematic all)
+	requiresMsa?: boolean;  // requires a Multiple Sequence Alignment
 	description?: string;
 	tags?: string[];
 	doi?: string;
