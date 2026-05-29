@@ -45,8 +45,9 @@ export async function submitAnalysis(payload: SubmitPayload): Promise<string> {
 	return data.analysis_id;
 }
 
-export async function getJobStatus(analysisId: string): Promise<JobStatusResponse> {
+export async function getJobStatus(analysisId: string): Promise<JobStatusResponse | null> {
 	const res = await fetch(`${API}/analysis/${analysisId}/status`);
+	if (res.status === 404) return null;
 	if (!res.ok) throw new Error(`Status fetch failed: ${res.status}`);
 	return res.json();
 }
@@ -56,4 +57,10 @@ export async function getJobPayload(analysisId: string): Promise<JobPayloadSumma
 	if (res.status === 404) return null;
 	if (!res.ok) throw new Error(`Payload fetch failed: ${res.status}`);
 	return res.json();
+}
+
+export async function getJobLogs(analysisId: string): Promise<string | null> {
+	const res = await fetch(`${API}/analysis/${analysisId}/logs`);
+	if (!res.ok) return null;
+	return res.text();
 }

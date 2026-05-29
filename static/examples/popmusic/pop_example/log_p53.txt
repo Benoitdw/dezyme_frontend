@@ -1,8 +1,0 @@
-Warning@ PROT_computeCMR: Half or more (4) sidechain coordinates are missing for residue A 101 (LYS) : CMR is unreliable.
-Warning@ PROT_computeCMR: Half or more (4) sidechain coordinates are missing for residue A 120 (LYS) : CMR is unreliable.
-Warning@ PROT_computeCMR: Half or more (6) sidechain coordinates are missing for residue A 181 (ARG) : CMR is unreliable.
-Warning@ PROT_computeCMR: Half or more (3) sidechain coordinates are missing for residue A 243 (MET) : CMR is unreliable.
-Warning@ PROT_computeCMR: Half or more (4) sidechain coordinates are missing for residue A 287 (GLU) : CMR is unreliable.
-Warning@ PROT_computeCMR: Half or more (4) sidechain coordinates are missing for residue B 101 (LYS) : CMR is unreliable.
-Warning@ PROT_computeCMR: Half or more (6) sidechain coordinates are missing for residue B 209 (ARG) : CMR is unreliable.
-Warning@ PROT_computeCMR: Half or more (3) sidechain coordinates are missing for residue B 243 (MET) : CMR is unreliable.

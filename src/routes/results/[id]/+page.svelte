@@ -3,84 +3,94 @@
 	import { base } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { tools } from '$lib/tools';
-	import { getJobStatus, getJobPayload } from '$lib/utils/api';
-	import { parsePops, parsePop } from '$lib/utils/popmusic';
-	import { parsePdbFile } from '$lib/utils/pdb';
+	import { getJobStatus, getJobPayload, getJobLogs } from '$lib/utils/api';
+	import { parseMutationsCSV } from '$lib/utils/popmusic';
 	import type { JobPayloadSummary, JobStatus } from '$lib/utils/api';
-	import type { PdbMetadata } from '$lib/utils/pdb';
-	import type { SummaryRow, MutationRow } from '$lib/utils/popmusic';
+	import type { EvolMutationRow } from '$lib/utils/popmusic';
 	import ProteinPending from '$lib/components/ProteinPending.svelte';
 	import DiffuseSineHorizon from '$lib/components/DiffuseSineHorizon.svelte';
-	import PopmusicResults from '$lib/components/results/PopmusicResults.svelte';
+	import PopmusicEvolResults from '$lib/components/results/PopmusicEvolResults.svelte';
+	import JobLogs from '$lib/components/JobLogs.svelte';
 
 	const analysisId = $page.params.id ?? '';
 
-	let status  = $state<JobStatus>('pending');
-	let error   = $state<string | null>(null);
-	let payload = $state<JobPayloadSummary | null>(null);
+	let status    = $state<JobStatus>('pending');
+	let error     = $state<string | null>(null);
+	let payload   = $state<JobPayloadSummary | null>(null);
+	let notFound  = $state(false);
 	let tool    = $derived(payload ? tools[payload.tool] : null);
 	let showPayload = $state(false);
-	let interval: ReturnType<typeof setInterval> | null = null;
+	let interval:    ReturnType<typeof setInterval> | null = null;
+	let logInterval: ReturnType<typeof setInterval> | null = null;
 
 	interface Results {
-		summary: SummaryRow[];
-		mutations: MutationRow[];
-		meta: PdbMetadata;
+		mutations: EvolMutationRow[];
 		pdbUrl: string;
-		downloadUrls: { pops: string; pop: string; pdb: string };
-		msaContent: string | null;
+		fastaContent: string | null;
+		zipUrl: string;
+		lambda: number;
 	}
 	let results = $state<Results | null>(null);
+	let jobLog  = $state<string | null>(null);
+
+	async function loadLog() {
+		jobLog = await getJobLogs(analysisId);
+	}
+
+	function startLogPolling() {
+		if (logInterval) return;
+		loadLog();
+		logInterval = setInterval(loadLog, 2000);
+	}
+
+	function stopLogPolling() {
+		if (logInterval) { clearInterval(logInterval); logInterval = null; }
+		loadLog();
+	}
 
 	async function loadResults(p: JobPayloadSummary) {
 		if (p.tool !== 'popmusic') return;
 
-		const outputBase = `/api/analysis/${analysisId}/output`;
+		const res = await fetch(`/api/analysis/${analysisId}/results`);
+		if (!res.ok) return;
+		const urls = await res.json();
 
-		const files: string[] = await fetch(outputBase).then((r) => r.json());
-		const popsFile = files.find((f) => f.endsWith('.pops'));
-		const popFile  = files.find((f) => f.endsWith('.pop') && !f.endsWith('.pops'));
-		const pdbFile  = files.find((f) => f.endsWith('.pdb'));
-		if (!popsFile || !popFile || !pdbFile) return;
+		if (!urls.mutations_csv || !urls.pdb || !urls.lambda_weight) return;
 
-		const fetches: Promise<string>[] = [
-			fetch(`${outputBase}/${popsFile}`).then((r) => r.text()),
-			fetch(`${outputBase}/${popFile}`).then((r) => r.text()),
-			fetch(`${outputBase}/${pdbFile}`).then((r) => r.text()),
-		];
-
-		const msaFetch = p.msa
-			? fetch(`/api/analysis/${analysisId}/msa`).then((r) => r.ok ? r.text() : null).catch(() => null)
-			: Promise.resolve(null);
-
-		const [popsText, popText, pdbText, msaContent] = await Promise.all([...fetches, msaFetch]);
-
-		const meta = parsePdbFile(pdbText);
-		meta.id = p.structureId;
+		const [mutationsText, lambdaText, fastaContent] = await Promise.all([
+			fetch(urls.mutations_csv).then((r) => r.text()),
+			fetch(urls.lambda_weight).then((r) => r.text()),
+			urls.fasta ? fetch(urls.fasta).then((r) => r.text()) : Promise.resolve(null),
+		]);
 
 		results = {
-			summary:      parsePops(popsText),
-			mutations:    parsePop(popText),
-			meta,
-			pdbUrl:       `${outputBase}/${pdbFile}`,
-			downloadUrls: {
-				pops: `${outputBase}/${popsFile}`,
-				pop:  `${outputBase}/${popFile}`,
-				pdb:  `${outputBase}/${pdbFile}`,
-			},
-			msaContent: msaContent ?? null,
+			mutations:    parseMutationsCSV(mutationsText),
+			pdbUrl:       urls.pdb,
+			fastaContent,
+			zipUrl:       `/api/analysis/${analysisId}/download`,
+			lambda:       parseFloat(lambdaText.trim()),
 		};
+	}
+
+	function stopAll() {
+		if (interval) { clearInterval(interval); interval = null; }
+		if (logInterval) { clearInterval(logInterval); logInterval = null; }
 	}
 
 	async function poll() {
 		try {
 			const res = await getJobStatus(analysisId);
+			if (res === null) { notFound = true; stopAll(); return; }
 			const prev = status;
 			status = res.status;
 			if (res.error) error = res.error;
 
+			if (status === 'running' && prev !== 'running') {
+				startLogPolling();
+			}
 			if (status === 'done' || status === 'error') {
-				if (interval) clearInterval(interval);
+				stopAll();
+				stopLogPolling();
 			}
 			if (status === 'done' && prev !== 'done' && payload) {
 				loadResults(payload);
@@ -92,14 +102,16 @@
 
 	onMount(() => {
 		getJobPayload(analysisId).then((p) => {
+			if (p === null) { notFound = true; stopAll(); return; }
 			payload = p;
-			if (p) document.body.setAttribute('data-tool', p.tool);
-			if (p && status === 'done') loadResults(p);
+			document.body.setAttribute('data-tool', p.tool);
+			if (status === 'done') loadResults(p);
 		});
 		poll();
 		interval = setInterval(poll, 3000);
 		return () => {
 			if (interval) clearInterval(interval);
+			if (logInterval) clearInterval(logInterval);
 			document.body.removeAttribute('data-tool');
 		};
 	});
@@ -109,18 +121,27 @@
 
 <DiffuseSineHorizon />
 
-{#if status === 'done' && results && payload}
-	<PopmusicResults
-		structureId={payload.structureId}
-		summary={results.summary}
+{#if notFound}
+	<div class="page">
+		<div class="status-block error">
+			<span class="status-icon">✗</span>
+			<div>
+				<div class="status-text">Analysis not found</div>
+				<div class="status-sub">This analysis does not exist or has been deleted.</div>
+			</div>
+		</div>
+		<a href="{base}/run" class="action-btn">New analysis</a>
+	</div>
+{:else if status === 'done' && results && payload}
+	<PopmusicEvolResults
 		mutations={results.mutations}
-		meta={results.meta}
 		pdbUrl={results.pdbUrl}
+		fastaContent={results.fastaContent}
+		zipUrl={results.zipUrl}
+		lambda={results.lambda}
 		title={payload.structureId}
 		subtitle={analysisId}
 		backUrl="/run?tool=popmusic"
-		downloadUrls={results.downloadUrls}
-		msaContent={results.msaContent}
 	/>
 {:else}
 	<div class="page">
@@ -150,8 +171,10 @@
 					{#if error}<div class="status-sub">{error}</div>{/if}
 				</div>
 			</div>
+			<JobLogs content={jobLog} />
 		{:else}
 			<ProteinPending label={status === 'running' ? 'Running…' : 'Pending…'} />
+			<JobLogs content={jobLog} />
 
 			{#if payload}
 				<div class="payload-section">

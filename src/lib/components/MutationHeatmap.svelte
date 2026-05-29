@@ -57,11 +57,12 @@
 		headerRows?: HeatmapRowDef[];
 		dataRows: HeatmapRowDef[];
 		colorbar?: ColorbarDef;
-		/** Column indices that are structural gaps — rendered with a cross-hatch pattern. */
 		gapIndices?: Set<number>;
+		selectedCol?: number | null;
+		oncolumnclick?: (colIdx: number) => void;
 	}
 
-	let { positions, headerRows = [], dataRows, colorbar, gapIndices }: Props = $props();
+	let { positions, headerRows = [], dataRows, colorbar, gapIndices, selectedCol, oncolumnclick }: Props = $props();
 
 	const HEADER_H = 26;
 	const DATA_H   = 20;
@@ -77,10 +78,12 @@
 	let isDragging = $state(false);
 	let hover     = $state<{ cssX: number; cssY: number; posLabel: string; rowLabel: string; value: number | null; isGap: boolean } | null>(null);
 
-	let viewStart     = 0;
-	let viewEnd       = 0;
-	let dragStartX    = 0;
-	let dragViewStart = 0;
+	let viewStart       = 0;
+	let viewEnd         = 0;
+	let dragStartX      = 0;
+	let dragViewStart   = 0;
+	let clickCandidateX = 0;
+	let clickCandidateY = 0;
 
 	const padRight = $derived(colorbar ? 90 : 20);
 
@@ -269,6 +272,17 @@
 			ctx.fillText(positions[j], x, PAD_TOP + plotH + 6);
 		}
 
+		// Selected column highlight
+		if (selectedCol != null && selectedCol >= viewStart && selectedCol < viewEnd) {
+			const xF = PAD_LEFT + ((selectedCol - viewStart) / vW) * PW;
+			const xW = PW / vW;
+			const xi = Math.floor(xF);
+			const xw = Math.max(2, Math.round(xF + xW) - xi);
+			ctx.strokeStyle = dark ? 'rgba(255,255,255,0.9)' : 'rgba(20,20,20,0.9)';
+			ctx.lineWidth = 2;
+			ctx.strokeRect(xi + 1, PAD_TOP + 1, Math.max(1, xw - 2), plotH - 2);
+		}
+
 		// Plot border
 		ctx.strokeStyle = borderClr;
 		ctx.lineWidth = 1;
@@ -360,6 +374,8 @@
 		isDragging = true;
 		dragStartX = e.clientX;
 		dragViewStart = viewStart;
+		clickCandidateX = e.clientX;
+		clickCandidateY = e.clientY;
 		e.preventDefault();
 	}
 
@@ -390,7 +406,17 @@
 		hover = { cssX, cssY, posLabel: positions[posIdx], rowLabel: row.def.label, value, isGap };
 	}
 
-	function onMouseUp()    { isDragging = false; }
+	function onMouseUp(e: MouseEvent) {
+		const moved = Math.abs(e.clientX - clickCandidateX) + Math.abs(e.clientY - clickCandidateY);
+		if (moved < 5 && oncolumnclick && canvas) {
+			const [cssX] = cssCoords(e);
+			const PW = canvas.width - PAD_LEFT - padRight;
+			if (cssX >= PAD_LEFT && cssX <= PAD_LEFT + PW) {
+				oncolumnclick(posAtCssX(cssX));
+			}
+		}
+		isDragging = false;
+	}
 	function onMouseLeave() { isDragging = false; hover = null; }
 
 	function resetZoom() {
@@ -415,13 +441,18 @@
 	});
 
 	$effect(() => {
-		void positions, headerRows, dataRows, $theme, ch, cw;
+		void positions, headerRows, dataRows, ch, cw;
 		if (!canvas) return;
 		canvas.width  = cw;
 		canvas.height = ch;
 		viewStart = 0;
 		viewEnd   = positions.length;
 		isZoomed  = false;
+		redraw();
+	});
+
+	$effect(() => {
+		void selectedCol, $theme;
 		redraw();
 	});
 </script>
