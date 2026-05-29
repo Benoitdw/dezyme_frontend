@@ -236,7 +236,7 @@
 		{/if}
 
 		<FileDropzone
-			accept=".fasta,.a3m,.fa"
+			accept=".fasta,.a2m,.a3m,.fa"
 			label="Drop your MSA file here"
 			hint="browse (.fasta, .a3m)"
 			onFile={handleFile}
