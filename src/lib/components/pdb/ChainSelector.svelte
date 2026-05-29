@@ -34,7 +34,7 @@
 	}
 
 	function formatSeq(seq: string): string {
-		return seq.replace(/(.{10})/g, '$1 ').trimEnd();
+		return seq;
 	}
 </script>
 

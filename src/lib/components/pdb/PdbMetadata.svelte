@@ -22,6 +22,17 @@
 	const rcsbUrl   = $derived(isPdbId ? `https://www.rcsb.org/structure/${meta.id}` : null);
 	const afUrl     = $derived(afMatch ? `https://alphafold.ebi.ac.uk/entry/${afMatch[1]}` : null);
 
+	function downloadPdb() {
+		if (!meta.pdbContent) return;
+		const blob = new Blob([meta.pdbContent], { type: 'text/plain' });
+		const url  = URL.createObjectURL(blob);
+		const a    = document.createElement('a');
+		a.href     = url;
+		a.download = `${meta.id}.pdb`;
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
 	const DIMMED_COLOR = [140, 140, 150];
 
 	function hexToRgb(hex: string): [number, number, number] {
@@ -90,7 +101,7 @@
 			<span class="meta-label">Structure</span>
 			<span class="meta-value">{meta.id}</span>
 		</div>
-		{#if rcsbUrl || afUrl}
+		{#if rcsbUrl || afUrl || hasContent}
 			<div class="meta-row">
 				<span class="meta-label">Links</span>
 				<span class="meta-value meta-value--links">
@@ -99,6 +110,9 @@
 					{/if}
 					{#if afUrl}
 						<a href={afUrl} target="_blank" rel="noopener noreferrer" class="ext-link">AlphaFold</a>
+					{/if}
+					{#if hasContent}
+						<button class="ext-link" onclick={downloadPdb} type="button">Download PDB</button>
 					{/if}
 				</span>
 			</div>
