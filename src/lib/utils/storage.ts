@@ -33,6 +33,14 @@ export function getRecentJobs(): StoredJob[] {
 	return load();
 }
 
+export function clearRecentJobs() {
+	localStorage.removeItem(KEY);
+}
+
+export function removeJob(id: string) {
+	save(load().filter((j) => j.id !== id));
+}
+
 export function parseToolFromId(analysisId: string): ToolId | null {
 	const prefix = analysisId.split('_')[0];
 	const ids = toolList.map((t) => t.id);

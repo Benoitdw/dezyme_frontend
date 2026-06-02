@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { base } from '$app/paths';
 	import { toolList } from '$lib/tools';
-	import { getRecentJobs } from '$lib/utils/storage';
+	import { getRecentJobs, clearRecentJobs, removeJob } from '$lib/utils/storage';
 	import type { StoredJob } from '$lib/utils/storage';
 
 	const CYCLE      = 5000;
@@ -302,12 +302,27 @@
 {#if recentJobs.length > 0}
 	<section class="recent-section">
 		<div class="section-inner">
-			<h2 class="section-title">Recent analyses</h2>
+			<div class="recent-header">
+				<h2 class="section-title">Recent analyses</h2>
+				<button
+					class="clear-btn"
+					type="button"
+					onclick={() => { clearRecentJobs(); recentJobs = []; }}
+				>Clear</button>
+			</div>
 			<ul class="recent-list">
 				{#each recentJobs as job}
 					<li class="recent-item">
 						<span class="recent-id">{job.id}</span>
-						<a href="{base}/results/{job.id}" class="recent-link">Open →</a>
+						<div class="recent-actions">
+							<a href="{base}/results/{job.id}" class="recent-link">Open →</a>
+							<button
+								class="remove-btn"
+								type="button"
+								aria-label="Remove {job.id}"
+								onclick={() => { removeJob(job.id); recentJobs = recentJobs.filter(j => j.id !== job.id); }}
+							><i class="fa-solid fa-trash-can"></i></button>
+						</div>
 					</li>
 				{/each}
 			</ul>
@@ -882,6 +897,34 @@
 	}
 
 	/* ── RECENT ──────────────────────────────────────── */
+	.recent-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 1.25rem;
+	}
+
+	.recent-header .section-title {
+		margin-bottom: 0;
+	}
+
+	.clear-btn {
+		background: none;
+		border: 1px solid var(--border);
+		border-radius: 0.375rem;
+		padding: 0.25rem 0.75rem;
+		font-size: 0.78rem;
+		font-weight: 600;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: color 0.15s, border-color 0.15s;
+	}
+
+	.clear-btn:hover {
+		color: #f87171;
+		border-color: color-mix(in srgb, #f87171 40%, transparent);
+	}
+
 	.recent-list {
 		list-style: none;
 		padding: 0;
@@ -901,9 +944,32 @@
 		font-size: 0.875rem;
 	}
 
-	.recent-id   { font-family: monospace; color: var(--text-muted); }
+	.recent-id { font-family: monospace; color: var(--text-muted); }
+
+	.recent-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
 	.recent-link { color: var(--text); text-decoration: none; font-weight: 600; }
 	.recent-link:hover { text-decoration: underline; }
+
+	.remove-btn {
+		background: none;
+		border: none;
+		padding: 0.2rem 0.3rem;
+		cursor: pointer;
+		color: var(--text-muted);
+		font-size: 0.78rem;
+		opacity: 0.4;
+		transition: color 0.15s, opacity 0.15s;
+		line-height: 1;
+	}
+
+	.recent-item:hover .remove-btn { opacity: 1; }
+
+	.remove-btn:hover { color: #f87171; }
 
 	/* ── MOBILE ──────────────────────────────────────── */
 	@media (max-width: 640px) {
