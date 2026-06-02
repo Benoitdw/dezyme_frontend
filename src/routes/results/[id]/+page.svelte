@@ -29,6 +29,10 @@
 		fastaContent: string | null;
 		zipUrl: string;
 		lambda: number;
+		msaNtot: number | null;
+		sigSlope: number | null;
+		sigCenter: number | null;
+		clipThreshold: number | null;
 	}
 	let results = $state<Results | null>(null);
 	let jobLog  = $state<string | null>(null);
@@ -55,20 +59,26 @@
 		if (!res.ok) return;
 		const urls = await res.json();
 
-		if (!urls.mutations_csv || !urls.pdb || !urls.lambda_weight) return;
+		if (!urls.mutations_csv || !urls.pdb || !urls.metadata_json) return;
 
-		const [mutationsText, lambdaText, fastaContent] = await Promise.all([
+		const [mutationsText, metadataText, fastaContent] = await Promise.all([
 			fetch(urls.mutations_csv).then((r) => r.text()),
-			fetch(urls.lambda_weight).then((r) => r.text()),
+			fetch(urls.metadata_json).then((r) => r.text()),
 			urls.fasta ? fetch(urls.fasta).then((r) => r.text()) : Promise.resolve(null),
 		]);
+
+		const metadata = JSON.parse(metadataText);
 
 		results = {
 			mutations:    parseMutationsCSV(mutationsText),
 			pdbUrl:       urls.pdb,
 			fastaContent,
 			zipUrl:       `/api/analysis/${analysisId}/download`,
-			lambda:       parseFloat(lambdaText.trim()),
+			lambda:        metadata.struct_vs_evol_models_lambda ?? 1,
+			msaNtot:       metadata.msa_Ntot ?? null,
+			sigSlope:      metadata.struct_vs_evol_models_sigmoid_slope  ?? null,
+			sigCenter:     metadata.struct_vs_evol_models_sigmoid_center ?? null,
+			clipThreshold: metadata.struct_vs_evol_models_clip_threshold ?? null,
 		};
 	}
 
@@ -139,6 +149,10 @@
 		fastaContent={results.fastaContent}
 		zipUrl={results.zipUrl}
 		lambda={results.lambda}
+		msaNtot={results.msaNtot}
+		sigSlope={results.sigSlope}
+		sigCenter={results.sigCenter}
+		clipThreshold={results.clipThreshold}
 		title={payload.structureId}
 		subtitle={analysisId}
 		backUrl="/run?tool=popmusic"

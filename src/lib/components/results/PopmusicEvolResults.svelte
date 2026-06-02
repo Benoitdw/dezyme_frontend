@@ -17,22 +17,27 @@
 		fastaContent: string | null;
 		zipUrl: string | null;
 		lambda: number;
+		msaNtot?: number | null;
+		sigSlope?: number | null;
+		sigCenter?: number | null;
+		clipThreshold?: number | null;
 		logContent?: string | null;
 		title?: string;
 		subtitle?: string;
 		backUrl?: string;
 	}
 
-	let { mutations, pdbUrl, fastaContent, zipUrl, lambda, logContent, title, subtitle, backUrl }: Props = $props();
+	let { mutations, pdbUrl, fastaContent, zipUrl, lambda, msaNtot, sigSlope, sigCenter, clipThreshold, logContent, title, subtitle, backUrl }: Props = $props();
 
 	const ACCENT = '#6366f1';
 
 	type Tab = 'mutations' | 'summary' | 'parameters' | 'log';
-	type ScoreKey = 'DV' | 'StructureDCA';
+	type ScoreKey = 'ddg' | 'ddgStr' | 'ddgStrEvol';
 
 	const SCORE_LABELS: Record<ScoreKey, string> = {
-		DV: 'ΔΔG',
-		StructureDCA: 'StructureDCA'
+		ddg: 'ΔΔG',
+		ddgStr: 'ΔΔG (structural)',
+		ddgStrEvol: 'ΔΔG (structural+evol)'
 	};
 
 	const SS_LABELS: Record<string, string> = {
@@ -41,8 +46,9 @@
 	};
 
 	let tab = $state<Tab>('mutations');
-	let scoreKey = $state<ScoreKey>('DV');
+	let scoreKey = $state<ScoreKey>('ddg');
 	let selectedPosIdx = $state<number | null>(null);
+	let expandedPosKeys = $state<Set<number>>(new Set());
 	let showViewer = $state(false);
 	let everOpened = $state(false);
 	$effect(() => { if (showViewer) everOpened = true; });
@@ -76,6 +82,11 @@
 		return Math.round(a + (b - a) * t);
 	}
 
+	function gapColor(v: number, _vmin: number, _vmax: number, _dark: boolean): [number, number, number] {
+		const t = Math.max(0, Math.min(1, v));
+		return [lerp(50, 220, t), lerp(180, 60, t), lerp(80, 50, t)];
+	}
+
 	function pldtColor(v: number, _vmin: number, _vmax: number, _dark: boolean): [number, number, number] {
 		const t = Math.max(0, Math.min(1, v / 100));
 		if (t < 0.5) {
@@ -98,7 +109,9 @@
 		if (aa === pos.wtAa) return null;
 		const row = pos.mutations.get(aa);
 		if (!row) return null;
-		return scoreKey === 'DV' ? row.DV : row.StructureDCA;
+		if (scoreKey === 'ddg') return row.ddg;
+		if (scoreKey === 'ddgStr') return row.ddgStr;
+		return row.ddgStrEvol;
 	}
 
 	const hmPositionLabels = $derived(positions.map(p => `${p.chain}${p.resNumPdb}`));
@@ -119,9 +132,16 @@
 			fmt: v => v.toFixed(0)
 		},
 		{
+			label: 'Gap',
+			values: positions.map(p => p.gap_ratio),
+			colorFn: gapColor,
+			vmin: 0, vmax: 1,
+			fmt: v => (v * 100).toFixed(0) + '%'
+		},
+		{
 			label: 'Mean',
 			values: positions.map(p =>
-				scoreKey === 'DV' ? p.meanDV : p.meanStructureDCA
+				scoreKey === 'ddg' ? p.meanDdg : scoreKey === 'ddgStr' ? p.meanDdgStr : p.meanDdgStrEvol
 			),
 			colorFn: scoreColorFn(scoreKey),
 			fmt: v => v.toFixed(2)
@@ -138,18 +158,15 @@
 	);
 
 	const hmColorbar = $derived.by<ColorbarDef>(() => {
-		const allVals = scoreKey === 'DV'
-			? mutations.map(m => m.DV)
-			: mutations.map(m => m.StructureDCA);
-		if (!allVals.length) return { label: scoreKey === 'DV' ? 'ΔΔG (kcal/mol)' : 'StructureDCA', vmin: -2, vmax: 2, colorFn: hmDdgColor };
+		const allVals = scoreKey === 'ddg'
+			? mutations.map(m => m.ddg)
+			: scoreKey === 'ddgStr'
+				? mutations.map(m => m.ddgStr)
+				: mutations.map(m => m.ddgStrEvol);
+		if (!allVals.length) return { label: 'ΔΔG (kcal/mol)', vmin: -2, vmax: 2, colorFn: hmDdgColor };
 		const mn = Math.max(-5, Math.floor(Math.min(...allVals) * 10) / 10);
 		const mx = Math.min(5, Math.ceil(Math.max(...allVals) * 10) / 10);
-		return {
-			label: scoreKey === 'DV' ? 'ΔΔG (kcal/mol)' : 'StructureDCA',
-			vmin: mn, vmax: mx,
-			colorFn: hmDdgColor,
-			fmt: v => (v > 0 ? '+' : '') + v.toFixed(1)
-		};
+		return { label: 'ΔΔG (kcal/mol)', vmin: mn, vmax: mx, colorFn: hmDdgColor, fmt: v => (v > 0 ? '+' : '') + v.toFixed(1) };
 	});
 
 	// ── 3D viewer ────────────────────────────────────────────────────────────
@@ -164,13 +181,13 @@
 		positions.map((p, i) => ({
 			chain: p.chain,
 			resNum: p.resNumPdb,
-			color: ddgHex(p.meanDV),
+			color: ddgHex(p.meanDdg),
 			selected: i === selectedPosIdx
 		}))
 	);
 
 	// ── Table sorting ─────────────────────────────────────────────────────────
-	type TableCol = 'pos' | 'RSA' | 'meanDV' | 'secStruct' | 'pLDDT' | 'gap_ratio';
+	type TableCol = 'pos' | 'RSA' | 'meanDdg' | 'meanDdgStr' | 'meanDdgStrEvol' | 'secStruct' | 'pLDDT' | 'gap_ratio';
 	let tableSort = $state<{ col: TableCol; dir: 1 | -1 }>({ col: 'pos', dir: 1 });
 
 	function toggleSort(col: TableCol) {
@@ -183,12 +200,14 @@
 		const dir = tableSort.dir;
 		return [...positions].sort((a, b) => {
 			switch (tableSort.col) {
-				case 'pos':       return (a.msaPos - b.msaPos) * dir;
-				case 'RSA':       return (a.RSA - b.RSA) * dir;
-				case 'meanDV':    return (a.meanDV - b.meanDV) * dir;
-				case 'pLDDT':     return (a.pLDDT - b.pLDDT) * dir;
-				case 'gap_ratio': return (a.gap_ratio - b.gap_ratio) * dir;
-				case 'secStruct': return a.secondary_structure.localeCompare(b.secondary_structure) * dir;
+				case 'pos':            return (a.msaPos - b.msaPos) * dir;
+				case 'RSA':            return (a.RSA - b.RSA) * dir;
+				case 'meanDdg':        return (a.meanDdg - b.meanDdg) * dir;
+				case 'meanDdgStr':     return (a.meanDdgStr - b.meanDdgStr) * dir;
+				case 'meanDdgStrEvol': return (a.meanDdgStrEvol - b.meanDdgStrEvol) * dir;
+				case 'pLDDT':          return (a.pLDDT - b.pLDDT) * dir;
+				case 'gap_ratio':      return (a.gap_ratio - b.gap_ratio) * dir;
+				case 'secStruct':      return a.secondary_structure.localeCompare(b.secondary_structure) * dir;
 				default: return 0;
 			}
 		});
@@ -197,6 +216,12 @@
 	function selectPositionFromTable(pos: PositionInfo) {
 		const idx = positions.findIndex(p => p.msaPos === pos.msaPos);
 		selectedPosIdx = selectedPosIdx === idx ? null : idx;
+	}
+
+	function toggleExpand(pos: PositionInfo) {
+		const next = new Set(expandedPosKeys);
+		if (next.has(pos.msaPos)) { next.delete(pos.msaPos); } else { next.add(pos.msaPos); }
+		expandedPosKeys = next;
 	}
 
 	function ddgClass(v: number): string {
@@ -208,6 +233,7 @@
 
 	// ── Chart ─────────────────────────────────────────────────────────────────
 	let canvasDist = $state<HTMLCanvasElement | undefined>();
+	let summaryScoreKey = $state<ScoreKey>('ddg');
 
 	function chartColors() {
 		const isDark = $theme === 'dark';
@@ -217,12 +243,13 @@
 		};
 	}
 
-	function makeDistChart(canvas: HTMLCanvasElement, muts: EvolMutationRow[], C = Chart!) {
+	function makeDistChart(canvas: HTMLCanvasElement, muts: EvolMutationRow[], key: ScoreKey, C = Chart!) {
 		const c = chartColors();
 		const BIN = 0.2, LO = -3, HI = 3;
 		const bins: number[] = Array(Math.round((HI - LO) / BIN)).fill(0);
 		for (const m of muts) {
-			const i = Math.floor((Math.min(Math.max(m.DV, LO), HI - 0.001) - LO) / BIN);
+			const val = key === 'ddg' ? m.ddg : key === 'ddgStr' ? m.ddgStr : m.ddgStrEvol;
+			const i = Math.floor((Math.min(Math.max(val, LO), HI - 0.001) - LO) / BIN);
 			bins[i]++;
 		}
 		const labels = bins.map((_, i) => (LO + i * BIN).toFixed(1));
@@ -256,12 +283,40 @@
 	$effect(() => {
 		if (!Chart || !canvasDist) return;
 		void $theme;
-		const chart = makeDistChart(canvasDist, mutations);
+		const key = summaryScoreKey;
+		const chart = makeDistChart(canvasDist, mutations, key);
 		return () => chart.destroy();
 	});
 
-	const clampedLambda = $derived(Math.min(1, Math.max(0, lambda)));
-	const beamAngle = $derived((clampedLambda - 0.5) * 40);
+	// ── Sigmoid λ chart ─────────────────────────────────────────────────────────
+	const SIG_YMAX = 4.5; // display range (fixed)
+	// SVG layout: left=52, top=18, plotW=238, plotH=122, viewBox 390×205
+	const SC_L = 52, SC_T = 18, SC_PW = 238, SC_PH = 122;
+	const SC_BOT = SC_T + SC_PH; // 140
+	const SC_MID_Y = SC_T + SC_PH / 2; // 79
+
+	function spx(lam: number): number { return SC_L + lam * SC_PW; }
+	function spy(l10: number): number { return SC_BOT - (l10 / SIG_YMAX) * SC_PH; }
+
+	// Sigmoid params from metadata (fallback to PoPMuSiC defaults)
+	const sigR   = $derived(sigSlope  ?? 5.0);
+	const sigC   = $derived(sigCenter ?? 1.0);
+	const clipThr = $derived(clipThreshold ?? 0.01);
+
+	const sigCurve = $derived.by(() =>
+		Array.from({ length: 201 }, (_, i) => {
+			const t = (i / 200) * SIG_YMAX;
+			const lam = 1 / (1 + Math.exp(-sigR * (t - sigC)));
+			return `${i === 0 ? 'M' : 'L'}${spx(lam).toFixed(1)},${spy(t).toFixed(1)}`;
+		}).join(' ')
+	);
+
+	const dotLog10 = $derived(msaNtot != null && msaNtot > 0 ? Math.min(Math.log10(msaNtot), SIG_YMAX) : 0);
+	// dotLam: raw sigmoid value (used for the dot & crosshair on the curve)
+	const dotLam        = $derived(1 / (1 + Math.exp(-sigR * (dotLog10 - sigC))));
+	// dotLamClipped: clipped value for lambda display only (not shown on curve)
+	const dotLamClipped = $derived(dotLam < clipThr ? 0 : dotLam);
+	const hasMsaDot = $derived(msaNtot != null && msaNtot > 0);
 
 	onMount(() => {
 		floatX = Math.max(16, window.innerWidth - 452);
@@ -329,13 +384,12 @@
 					<div>
 						<span class="heatmap-title">Mutation effect map</span>
 						<span class="heatmap-sub">
-							{SCORE_LABELS[scoreKey]} per position and amino acid substitution
-							{#if scoreKey === 'DV'} — red = destabilizing, blue = stabilizing{/if}
+							Computed {SCORE_LABELS[scoreKey]} per position and amino acid substitution — red = destabilizing, green = stabilizing
 						</span>
 					</div>
 					<!-- Score selector -->
 					<div class="score-selector">
-						{#each (['DV', 'StructureDCA'] as ScoreKey[]) as key}
+						{#each (['ddg', 'ddgStr', 'ddgStrEvol'] as ScoreKey[]) as key}
 							<button
 								class="score-btn"
 								class:active={scoreKey === key}
@@ -372,15 +426,20 @@
 						<th class="num sortable" class:sort-active={tableSort.col === 'RSA'} onclick={() => toggleSort('RSA')}>
 							RSA <span class="sort-arrow">{tableSort.col === 'RSA' ? (tableSort.dir === 1 ? '↑' : '↓') : '↕'}</span>
 						</th>
-						<th class="num sortable" class:sort-active={tableSort.col === 'meanDV'} onclick={() => toggleSort('meanDV')}>
-							Mean ΔΔG <span class="sort-arrow">{tableSort.col === 'meanDV' ? (tableSort.dir === 1 ? '↑' : '↓') : '↕'}</span>
-						</th>
-						<th class="num">Mean StructureDCA</th>
 						<th class="num sortable" class:sort-active={tableSort.col === 'pLDDT'} onclick={() => toggleSort('pLDDT')}>
 							pLDDT <span class="sort-arrow">{tableSort.col === 'pLDDT' ? (tableSort.dir === 1 ? '↑' : '↓') : '↕'}</span>
 						</th>
 						<th class="num sortable" class:sort-active={tableSort.col === 'gap_ratio'} onclick={() => toggleSort('gap_ratio')}>
 							Gap Ratio <span class="sort-arrow">{tableSort.col === 'gap_ratio' ? (tableSort.dir === 1 ? '↑' : '↓') : '↕'}</span>
+						</th>
+						<th class="num sortable" class:sort-active={tableSort.col === 'meanDdg'} onclick={() => toggleSort('meanDdg')}>
+							Mean ΔΔG <span class="sort-arrow">{tableSort.col === 'meanDdg' ? (tableSort.dir === 1 ? '↑' : '↓') : '↕'}</span>
+						</th>
+						<th class="num sortable" class:sort-active={tableSort.col === 'meanDdgStr'} onclick={() => toggleSort('meanDdgStr')}>
+							Mean str <span class="sort-arrow">{tableSort.col === 'meanDdgStr' ? (tableSort.dir === 1 ? '↑' : '↓') : '↕'}</span>
+						</th>
+						<th class="num sortable" class:sort-active={tableSort.col === 'meanDdgStrEvol'} onclick={() => toggleSort('meanDdgStrEvol')}>
+							Mean str+evol <span class="sort-arrow">{tableSort.col === 'meanDdgStrEvol' ? (tableSort.dir === 1 ? '↑' : '↓') : '↕'}</span>
 						</th>
 					</tr>
 				</thead>
@@ -388,23 +447,49 @@
 					{#each sortedPositions as pos}
 						{@const posIdx = positions.findIndex(p => p.msaPos === pos.msaPos)}
 						{@const isSelected = posIdx === selectedPosIdx}
-						<tr
-							class="pos-row"
-							class:is-sel={isSelected}
-							onclick={() => selectPositionFromTable(pos)}
-						>
-							<td class="pos-cell">{pos.chain}{pos.resNumPdb}</td>
+						{@const isExpanded = expandedPosKeys.has(pos.msaPos)}
+						<tr class="pos-row" class:is-sel={isSelected} class:is-expanded={isExpanded}
+							onclick={() => toggleExpand(pos)}>
+							<td>
+								<div class="pos-cell">
+									<span class="expand-chevron">{isExpanded ? '▾' : '▸'}</span>
+									<button class="pos-label" onclick={(e) => { e.stopPropagation(); selectPositionFromTable(pos); }}>
+										{pos.chain}{pos.resNumPdb}
+									</button>
+								</div>
+							</td>
 							<td class="aa-cell">{pos.wtAa}</td>
 							<td><span class="ss-badge ss-{pos.secondary_structure}">{SS_LABELS[pos.secondary_structure] ?? pos.secondary_structure}</span></td>
 							<td class="num">{pos.RSA.toFixed(1)}%</td>
-							<td class="num"><span class="ddg-pill {ddgClass(pos.meanDV)}">{pos.meanDV > 0 ? '+' : ''}{pos.meanDV.toFixed(2)}</span></td>
-							<td class="num mono">{pos.meanStructureDCA.toFixed(3)}</td>
 							<td class="num">{pos.pLDDT.toFixed(1)}</td>
 							<td class="num">{(pos.gap_ratio * 100).toFixed(1)}%</td>
+							<td class="num"><span class="ddg-pill {ddgClass(pos.meanDdg)}">{pos.meanDdg > 0 ? '+' : ''}{pos.meanDdg.toFixed(2)}</span></td>
+							<td class="num mono">{pos.meanDdgStr.toFixed(3)}</td>
+							<td class="num mono">{pos.meanDdgStrEvol.toFixed(3)}</td>
 						</tr>
+						{#if isExpanded}
+							{#each AA_ORDER as aa}
+								{@const row = pos.mutations.get(aa)}
+								{#if row && aa !== pos.wtAa}
+									<tr class="mut-row">
+										<td>
+											<div class="mut-label">
+												<span class="mut-from">{pos.wtAa}</span>
+												<span class="mut-arrow">→</span>
+												<span class="mut-to">{aa}</span>
+											</div>
+										</td>
+										<td></td><td></td><td></td><td></td><td></td>
+										<td class="num"><span class="ddg-pill {ddgClass(row.ddg)}">{row.ddg > 0 ? '+' : ''}{row.ddg.toFixed(2)}</span></td>
+										<td class="num mono">{row.ddgStr.toFixed(3)}</td>
+										<td class="num mono">{row.ddgStrEvol.toFixed(3)}</td>
+									</tr>
+								{/if}
+							{/each}
+						{/if}
 					{/each}
 					{#if sortedPositions.length === 0}
-						<tr><td colspan="8" class="empty-cell">No data available</td></tr>
+						<tr><td colspan="9" class="empty-cell">No data available</td></tr>
 					{/if}
 				</tbody>
 			</table>
@@ -414,8 +499,18 @@
 	<!-- Tab 2: Summary -->
 	{#if tab === 'summary'}
 		<div class="chart-card">
-			<div class="chart-title">ΔΔG distribution</div>
-			<div class="chart-sub">Distribution of all individual mutation effects — green = stabilizing, red = destabilizing</div>
+			<div class="chart-card-header">
+				<div>
+					<div class="chart-title">ΔΔG distribution</div>
+					<div class="chart-sub">Distribution of all individual mutation effects — green = stabilizing, red = destabilizing</div>
+				</div>
+				<div class="score-selector">
+					{#each (['ddg', 'ddgStr', 'ddgStrEvol'] as ScoreKey[]) as key}
+						<button class="score-btn" class:active={summaryScoreKey === key}
+							onclick={() => (summaryScoreKey = key)}>{SCORE_LABELS[key]}</button>
+					{/each}
+				</div>
+			</div>
 			<div class="chart-wrap">
 				<canvas bind:this={canvasDist}></canvas>
 			</div>
@@ -429,35 +524,65 @@
 				<div class="param-card-title">Model formula</div>
 				<div class="formula-box">
 					<div class="formula-text">
-						ΔΔG = (1 &minus; &lambda;) &middot; ΔΔG<sub>stv</sub> + &lambda; &middot; ΔΔG<sub>eval</sub>
+						ΔΔG = (1 &minus; &lambda;) &middot; ΔΔG<sub>str</sub> + &lambda; &middot; ΔΔG<sub>str+evol</sub>
 					</div>
-					<div class="balance-container">
-						<div class="balance-side left">
-							<div class="balance-name">ΔΔG<sub>stv</sub></div>
-							<div class="balance-coef">{(1 - clampedLambda).toFixed(3)}</div>
-						</div>
-						<svg class="balance-svg" viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
-							<!-- fulcrum -->
-							<line x1="100" y1="78" x2="100" y2="62" stroke="var(--text-muted)" stroke-width="2"/>
-							<polygon points="100,62 93,78 107,78" fill="var(--text-muted)" opacity="0.5"/>
-							<!-- beam + pans, rotating around pivot -->
-							<g transform="rotate({beamAngle}, 100, 50)">
-								<line x1="18" y1="50" x2="182" y2="50" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/>
-								<circle cx="100" cy="50" r="3.5" fill="var(--text-muted)"/>
-								<!-- left strings + pan -->
-								<line x1="18" y1="50" x2="18" y2="64" stroke="var(--text-muted)" stroke-width="1.5"/>
-								<line x1="10" y1="50" x2="26" y2="50" stroke="var(--accent)" stroke-width="2" opacity="0.3"/>
-								<ellipse cx="18" cy="68" rx="10" ry="5" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
-								<!-- right strings + pan -->
-								<line x1="182" y1="50" x2="182" y2="64" stroke="var(--text-muted)" stroke-width="1.5"/>
-								<line x1="174" y1="50" x2="190" y2="50" stroke="var(--accent)" stroke-width="2" opacity="0.3"/>
-								<ellipse cx="182" cy="68" rx="10" ry="5" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
-							</g>
+					<div class="sig-container">
+						<svg class="sig-svg" viewBox="0 0 390 205" xmlns="http://www.w3.org/2000/svg">
+						<g transform="translate(24, 0)">
+							<!-- grid -->
+							{#each [1, 2, 3, 4] as t}
+								<line x1={SC_L} y1={spy(t)} x2={SC_L + SC_PW} y2={spy(t)} stroke="var(--border)" stroke-width="0.5"/>
+							{/each}
+							<!-- crosshairs -->
+							{#if hasMsaDot}
+								<line x1={SC_L} y1={spy(dotLog10)} x2={spx(dotLam)} y2={spy(dotLog10)}
+									  stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4,3" opacity="0.55"/>
+								<line x1={spx(dotLam)} y1={spy(dotLog10)} x2={spx(dotLam)} y2={SC_BOT}
+									  stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4,3" opacity="0.55"/>
+							{/if}
+							<!-- sigmoid curve -->
+							<path d={sigCurve} fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+							<!-- dots -->
+							{#if hasMsaDot}
+								<circle cx={SC_L}         cy={spy(dotLog10)} r="3.5" fill="var(--text-muted)" opacity="0.6"/>
+								<circle cx={spx(dotLam)}  cy={SC_BOT}        r="3.5" fill="var(--text-muted)" opacity="0.6"/>
+								<circle cx={spx(dotLam)}  cy={spy(dotLog10)} r="4.5" fill="var(--accent)"/>
+							{/if}
+							<!-- axes -->
+							<line x1={SC_L} y1={SC_T}   x2={SC_L}         y2={SC_BOT} stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="square"/>
+							<line x1={SC_L} y1={SC_BOT} x2={SC_L + SC_PW} y2={SC_BOT} stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="square"/>
+							<!-- Y ticks + labels -->
+							{#each [0, 1, 2, 3, 4] as t}
+								<line x1={SC_L - 4} y1={spy(t)} x2={SC_L} y2={spy(t)} stroke="var(--text-muted)" stroke-width="1.5"/>
+								<text x={SC_L - 7} y={spy(t)} text-anchor="end" dominant-baseline="middle" font-size="9.5" fill="var(--text-muted)">{t}</text>
+							{/each}
+							<!-- Y axis label -->
+							<text x={10} y={SC_MID_Y} text-anchor="middle" dominant-baseline="middle"
+								  font-size="10" fill="var(--text-muted)" transform="rotate(-90, 10, {SC_MID_Y})">log₁₀(Nₜₒₜ)</text>
+							<!-- X ticks + labels -->
+							{#each [0, 0.25, 0.5, 0.75, 1] as t}
+								<line x1={spx(t)} y1={SC_BOT} x2={spx(t)} y2={SC_BOT + 4} stroke="var(--text-muted)" stroke-width="1.5"/>
+								<text x={spx(t)} y={SC_BOT + 15} text-anchor="middle" font-size="9.5" fill="var(--text-muted)">{t}</text>
+							{/each}
+							<!-- X axis label (λ) -->
+							<text x={171} y={SC_BOT + 30} text-anchor="middle" font-size="12" fill="var(--text-muted)" font-style="italic">λ</text>
+							<!-- ΔΔG endpoint labels -->
+							<text x={SC_L}         y={SC_BOT + 47} text-anchor="middle" font-size="9.5" fill="var(--text-muted)">ΔΔG<tspan dy="2" font-size="7.5">str</tspan></text>
+							<text x={SC_L + SC_PW} y={SC_BOT + 47} text-anchor="middle" font-size="9.5" fill="var(--text-muted)">ΔΔG<tspan dy="2" font-size="7.5">str+evol</tspan></text>
+							<!-- corner labels -->
+							<text x={SC_L + 6} y={SC_BOT - 6}  font-size="8.5" fill="var(--text-muted)" opacity="0.6">No MSA</text>
+							<text x={SC_L + 6} y={SC_T + 14}   font-size="8.5" fill="var(--text-muted)" opacity="0.6">Deep MSA</text>
+						</g>
 						</svg>
-						<div class="balance-side right">
-							<div class="balance-name">ΔΔG<sub>eval</sub></div>
-							<div class="balance-coef">{clampedLambda.toFixed(3)}</div>
-						</div>
+						{#if hasMsaDot}
+							<div class="sig-vals">
+								<span>N<sub>tot</sub> = <code>{msaNtot?.toLocaleString()}</code></span>
+								<span class="sig-sep">·</span>
+								<span>log₁₀(N<sub>tot</sub>) = <code>{dotLog10.toFixed(3)}</code></span>
+								<span class="sig-sep">·</span>
+								<span>λ = <code>{dotLamClipped.toFixed(3)}</code></span>
+							</div>
+						{/if}
 					</div>
 				</div>
 			</div>
@@ -558,8 +683,20 @@
 	.pos-row { cursor: pointer; transition: background 0.1s; }
 	.pos-row:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
 	.pos-row.is-sel { background: color-mix(in srgb, var(--accent) 8%, transparent); }
-	.pos-cell { font-family: monospace; font-size: 0.875rem; white-space: nowrap; }
+	.pos-row.is-expanded { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+	.pos-cell { display: flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
+	.expand-chevron { font-size: 0.65rem; color: var(--text-muted); width: 12px; flex-shrink: 0; }
+	.pos-label { background: none; border: none; font-family: monospace; font-size: 0.875rem; color: var(--text); cursor: pointer; padding: 0; text-underline-offset: 2px; }
+	.pos-label:hover { color: var(--accent); text-decoration: underline; }
 	.aa-cell { font-family: monospace; font-weight: 700; font-size: 1rem; }
+	/* Mutation sub-rows */
+	.mut-row { background: color-mix(in srgb, var(--bg) 60%, var(--surface)); }
+	.mut-row:hover { background: color-mix(in srgb, var(--accent) 3%, var(--bg)); }
+	.mut-row td { padding: 0.28rem 0.875rem; border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent); font-size: 0.82rem; }
+	.mut-label { display: flex; align-items: center; gap: 0.3rem; padding-left: 1.6rem; font-family: monospace; }
+	.mut-from { color: var(--text-muted); font-weight: 600; }
+	.mut-arrow { color: var(--text-muted); opacity: 0.5; font-size: 0.75rem; }
+	.mut-to { color: var(--text); font-weight: 700; }
 	.mono { font-family: monospace; }
 	.empty-cell { text-align: center; color: var(--text-muted); font-size: 0.875rem; padding: 2.5rem !important; }
 
@@ -582,9 +719,10 @@
 	:root[data-theme='dark'] .ddg-dl { background: #7c2d12; color: #fed7aa; } :root[data-theme='dark'] .ddg-ds { background: #7f1d1d; color: #fca5a5; }
 
 	/* Summary tab */
-	.chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 0.875rem; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.35rem; }
+	.chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 0.875rem; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; }
+	.chart-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 	.chart-title { font-size: 0.82rem; font-weight: 600; color: var(--text); }
-	.chart-sub { font-size: 0.72rem; color: var(--text-muted); }
+	.chart-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.15rem; }
 	.chart-wrap { position: relative; height: 300px; margin-top: 0.75rem; }
 	.chart-wrap canvas { width: 100% !important; height: 100% !important; }
 
@@ -592,17 +730,14 @@
 	.params-section { display: flex; flex-direction: column; gap: 1.5rem; }
 	.param-card { background: var(--surface); border: 1px solid var(--border); border-radius: 0.875rem; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
 	.param-card-title { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
-	.formula-box { display: flex; flex-direction: column; gap: 1.25rem; }
-	.formula-text { font-size: 1.05rem; font-family: 'Georgia', serif; color: var(--text); padding: 0.75rem 1.25rem; background: var(--bg); border: 1px solid var(--border); border-radius: 0.5rem; display: inline-block; align-self: flex-start; }
+	.formula-box { display: flex; flex-direction: column; gap: 1.25rem; align-items: center; }
+	.formula-text { font-size: 1.05rem; font-family: 'Georgia', serif; color: var(--text); padding: 0.75rem 1.25rem; background: var(--bg); border: 1px solid var(--border); border-radius: 0.5rem; display: inline-block; }
 	.formula-text sub { font-size: 0.65em; }
-	.balance-container { display: flex; align-items: center; gap: 0.5rem; align-self: flex-start; }
-	.balance-svg { width: 160px; height: 65px; flex-shrink: 0; }
-	.balance-side { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; min-width: 64px; }
-	.balance-side.left { align-items: flex-end; }
-	.balance-side.right { align-items: flex-start; }
-	.balance-name { font-size: 0.85rem; font-family: 'Georgia', serif; color: var(--text); }
-	.balance-name sub { font-size: 0.65em; }
-	.balance-coef { font-size: 1rem; font-weight: 700; font-family: monospace; color: var(--accent); }
+	.sig-container { display: flex; flex-direction: column; gap: 0.5rem; align-self: stretch; align-items: center; }
+	.sig-svg { width: 100%; max-width: 420px; height: auto; }
+	.sig-vals { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--text-muted); justify-content: center; }
+	.sig-vals code { font-family: monospace; font-size: 0.8rem; color: var(--text); }
+	.sig-sep { opacity: 0.4; }
 
 	/* Floating 3D viewer */
 	.float-panel { position: fixed; z-index: 150; width: 420px; background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; box-shadow: 0 12px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; }

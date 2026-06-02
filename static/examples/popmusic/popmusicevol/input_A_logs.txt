@@ -1,0 +1,164 @@
+
+====================================================================================================
+PoPMuSiC-evol (v1.0)
+====================================================================================================
+
+[STEP 1: Process input]
+====================================================================================================
+• [Input files]
+  - msa_path:                       './AF-P12345-F1-msa_v6.a3m'
+  - pdb_path:                       './input.pdb'
+  - chain:                          'A'
+• [Settings]
+  - num_threads:                    4
+  - time:                           '2026-06-02 09:52:54'
+  - run_name:                       'input_A'
+• [Set target sequence]
+  Parse first sequence from MSA 'AF-P12345-F1-msa_v6.a3m'
+  - sequence (L=430):               'MALLHSARVLSGVASAFHPGLAAAASARASSWWAHVEMGPPDPILGVTEAYKRDTNSKKM ... LAHAIHQVTK'
+• [Parse protein 3D structure]
+  StructureMetadata('input', 'A')
+  - sequence (L=430):               'MALLHSARVLSGVASAFHPGLAAAASARASSWWAHVEMGPPDPILGVTEAYKRDTNSKKM ... LAHAIHQVTK'
+  - target molecule:                'ASPARTATE AMINOTRANSFERASE, MITOCHONDRIAL'
+  - standard AAs:                   [430 / 430] (100.00%)
+  - missing AAs:                    [  0 / 430] (  0.00%)
+  - non-standard AAs:               [  0 / 430] (  0.00%)
+  - all protein chains:             'A'
+  - all other chains:               ''
+  - homomeric groups:               'A'
+  - target homomeric group:         'A'
+  - structure title:                'ALPHAFOLD MONOMER V2.0 PREDICTION FOR ASPARTATE AMINOTRANSFERASE, MITOCHONDRIAL (P12345)'
+• [Align target chain from 3D structure and target sequence]
+  AlignedPositions(Struct['input_A'] -> Seq['query'])
+  1 - 100
+  MALLHSARVLSGVASAFHPGLAAAASARASSWWAHVEMGPPDPILGVTEAYKRDTNSKKMNLGVGAYRDDNGKPYVLPSVRKAEAQIAAKGLDKEYLPIG
+  ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+  MALLHSARVLSGVASAFHPGLAAAASARASSWWAHVEMGPPDPILGVTEAYKRDTNSKKMNLGVGAYRDDNGKPYVLPSVRKAEAQIAAKGLDKEYLPIG
+  101 - 200
+  GLAEFCRASAELALGENSEVVKSGRFVTVQTISGTGALRIGASFLQRFFKFSRDVFLPKPSWGNHTPIFRDAGMQLQSYRYYDPKTCGFDFTGALEDISK
+  ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+  GLAEFCRASAELALGENSEVVKSGRFVTVQTISGTGALRIGASFLQRFFKFSRDVFLPKPSWGNHTPIFRDAGMQLQSYRYYDPKTCGFDFTGALEDISK
+  201 - 300
+  IPEQSVLLLHACAHNPTGVDPRPEQWKEIATVVKKRNLFAFFDMAYQGFASGDGDKDAWAVRHFIEQGINVCLCQSYAKNMGLYGERVGAFTVICKDADE
+  ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+  IPEQSVLLLHACAHNPTGVDPRPEQWKEIATVVKKRNLFAFFDMAYQGFASGDGDKDAWAVRHFIEQGINVCLCQSYAKNMGLYGERVGAFTVICKDADE
+  301 - 400
+  AKRVESQLKILIRPMYSNPPIHGARIASTILTSPDLRKQWLQEVKGMADRIIGMRTQLVSNLKKEGSTHSWQHITDQIGMFCFTGLKPEQVERLTKEFSI
+  ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+  AKRVESQLKILIRPMYSNPPIHGARIASTILTSPDLRKQWLQEVKGMADRIIGMRTQLVSNLKKEGSTHSWQHITDQIGMFCFTGLKPEQVERLTKEFSI
+  401 - 430
+  YMTKDGRISVAGVTSGNVGYLAHAIHQVTK
+  ||||||||||||||||||||||||||||||
+  YMTKDGRISVAGVTSGNVGYLAHAIHQVTK
+  
+  - canonical positions:            [430 / 430] (100.00%)
+[STEP 1: DONE in 0.020 sec.]
+
+[STEP 2: Run PoPMuSiCPredictor]
+====================================================================================================
+• [Initialize MuSiC]
+• [Run PoPMuSiC mutational scanning]
+  Run MuSiC command './music -pop all input -log input -export ddg -init ./path.in'
+• [Parse PoPMuSiC output]
+  - Evaluated muts.:                8170
+  - Evaluated res. :                430
+[STEP 2: DONE in 34.965 sec.]
+
+[STEP 3: Run StructureDCAPredictor]
+====================================================================================================
+• [Solve StructureDCA model]
+  StructureDCA main parameters: 
+  - homomeric_chains:               None
+  - distance_cutoff:                8.000
+  - lambda_h:                       1.000
+  - lambda_J:                       1.000
+  - lambda_asymptotic:              0.001
+  - exclude_gaps:                   True
+  - min_seqid:                      0.250
+  - weights_seqid:                  0.800
+  - use_contacts_plddt_filter:      False
+  - contacts_plddt_cutoff:          70.000
+  
+
+  --------------------------------------------------------------------------------
+  --------------------------------------------------------------------------------
+  StructureDCA: Initialize StructureDCA('AF-P12345-F1-msa_v6').
+  StructureDCA: Read MSA target sequence (first sequence in the MSA).
+   * sequence: 'MALLHSARVLSGVASAFHPGLAAAASARAS...' (l=430)
+  StructureDCA: Parse PDB structure 'input' (target chains 'A').
+   * target chains: 'A' (l=430)
+   * all chains:    'A' (l=430)
+  StructureDCA: Compute structural properties.
+   * compute residue-residue distance matrix [430x430]
+   * execute RSA solver: RSASolver['biopython']
+   * assigned RSA values: 430 / 430 
+  StructureDCA: Align structure (PDB, l=430) and sequence (MSA, l=430).
+   * sequence positions aligned to structure: 430 / 430
+  StructureDCA: Set distance-based contacts matrix [430x430] (for sparse DCA).
+   * distance_cutoff: 8.00
+   * remaining couplings: 6338 / 184470 (3.44 %)
+   * average contacts by position: 14.74
+  StructureDCA: Initialize DCA solver.
+  StructureDCA: Solve DCA model (h and J coefficients).
+   * remove redundant sequences: 14768 -> 14768
+   * filter distant sequences (min_seqid=0.25): 14768 -> 14515
+  StructureDCA: Run DCASolver::plmDCA (C++ backend): to solve DCA coefficients h and J.
+  StructureDCA: Fix Gauge.
+   * Gauge fixed to: Gauge['zero-sum']
+  --------------------------------------------------------------------------------
+
+  StructureDCA measures: 
+  - MSA length:                     430
+  - MSA depth / initial_depth:      [14515 / 14768] ( 98.29%)
+  - MSA Neff:                       3773.080
+  - Avg. couplings by position:     14.740
+  - Num. couplings:                 [  6338 / 184470] (  3.44%)
+• [Evaluate all single-site mutations]
+  - Evaluated muts.:                8600
+  - Evaluated res. :                430
+[STEP 3: DONE in 1.592 min.]
+
+[STEP 4: Run SaProtPredictor]
+====================================================================================================
+• [Initialize SaProt]
+  - use_plddt_filter:               False
+  - plddt_threshold:                70.000
+  - device:                         'cuda'
+• [Tokenize 3D structure with FoldSeek.]
+  - SEQRES-sequence (L=430):        'MALLHSARVLSGVASAFHPGLAAAASARASSWWAHVEMGPPDPILGVTEAYKRDTNSKKM ... LAHAIHQVTK'
+  - num. missing ATOM-residues:     [  0 / 430] (  0.00%)
+  - num. pLDDT masked tokens:       [  0 / 430] (  0.00%)
+  - sequence3Di:                    'DDDDDDDDDDDDDDDDDDDDDDDPPPPPPDPPCPPPDDDDDDLLVVLVVLLVPDPDPLAF ... VSNSSNVSPD'
+• [Load SaProt model.]
+• [Evaluate all single-site mutations]
+  - Evaluated muts.:                8600
+[STEP 4: DONE in 17.356 min.]
+
+[STEP 5: Process all single-site mutations]
+====================================================================================================
+• [Generate preictors values]
+[STEP 5: DONE in 0.927 sec.]
+
+[STEP 6: Assign models predictions]
+====================================================================================================
+• [Assign model 'PoPMuSiCv3_str']
+  - assigned values:                [8170 / 8600] ( 95.00%)
+• [Assign model 'PoPMuSiCv3_str+evol']
+  - assigned values:                [8170 / 8600] ( 95.00%)
+• [Assign model 'PoPMuSiCv3']
+  - assigned values:                [8170 / 8600] ( 95.00%)
+  - log10(Ntot):                    4.162
+  - lambda(Ntot) (str vs. str+evol model): 1.000
+[STEP 6: DONE in 0.220 sec.]
+
+[STEP 7: Post-processing and save outputs]
+====================================================================================================
+  - Processed muts.:                8600
+  Save mutational output './e21bf4df-de33-4d71-bd31-1a92b389c229/input_A_mutations.csv'
+  Save metadata './e21bf4df-de33-4d71-bd31-1a92b389c229/input_A_metadata.json'
+[STEP 7: DONE in 0.120 sec.]
+
+====================================================================================================
+RUN 'input_A' DONE in 19.553 min.
+====================================================================================================
+

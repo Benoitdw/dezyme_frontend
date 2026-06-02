@@ -19,8 +19,12 @@
 	fastaContent={data.fastaContent}
 	zipUrl={data.zipUrl}
 	lambda={data.lambda}
+	msaNtot={data.msaNtot}
+	sigSlope={data.sigSlope}
+	sigCenter={data.sigCenter}
+	clipThreshold={data.clipThreshold}
 	logContent={data.logContent}
-	title="6acv A:29-94 — Example results"
-	subtitle="Example · PopMuSiC Evol · AlphaFold2 · Chain A"
+	title="P12345 — Example results"
+	subtitle="Example · PopMuSiC · AlphaFold2 · Chain A"
 	backUrl="{base}/run?tool=popmusic"
 />
