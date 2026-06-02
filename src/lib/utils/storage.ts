@@ -5,6 +5,7 @@ export interface StoredJob {
 	id: string;
 	tool: ToolId;
 	structureId: string;
+	chains?: string[];
 }
 
 const KEY = 'dezyme_jobs';

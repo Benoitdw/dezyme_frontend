@@ -313,7 +313,14 @@
 			<ul class="recent-list">
 				{#each recentJobs as job}
 					<li class="recent-item">
-						<span class="recent-id">{job.id}</span>
+						<span class="recent-id">
+							{#if job.structureId}
+								<span class="recent-label">{job.structureId}{job.chains?.length ? ' · ' + job.chains.join(', ') : ''}</span>
+								<span class="recent-uuid">{job.id}</span>
+							{:else}
+								{job.id}
+							{/if}
+						</span>
 						<div class="recent-actions">
 							<a href="{base}/results/{job.id}" class="recent-link">Open →</a>
 							<button
@@ -944,7 +951,9 @@
 		font-size: 0.875rem;
 	}
 
-	.recent-id { font-family: monospace; color: var(--text-muted); }
+	.recent-id { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+	.recent-label { font-size: 0.9rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.recent-uuid { font-family: monospace; font-size: 0.75rem; color: var(--text-muted); }
 
 	.recent-actions {
 		display: flex;

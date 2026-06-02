@@ -199,6 +199,9 @@
 						<div class="payload-card">
 							<div class="payload-row"><span class="payload-key">tool</span><span class="payload-val">{payload.tool}</span></div>
 							<div class="payload-row"><span class="payload-key">structure</span><span class="payload-val">{payload.structureId}</span></div>
+							{#if payload.pdbFilename && payload.pdbFilename !== payload.structureId}
+								<div class="payload-row"><span class="payload-key">pdb name</span><span class="payload-val">{payload.pdbFilename}</span></div>
+							{/if}
 							<div class="payload-row"><span class="payload-key">chains</span><span class="payload-val">{payload.chains.join(', ')}</span></div>
 							{#if payload.pdb}
 								<div class="payload-row"><span class="payload-key">pdb</span><span class="payload-val">{(payload.pdb.bytes / 1024).toFixed(1)} KB</span></div>

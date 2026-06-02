@@ -95,6 +95,7 @@
 			const id = await submitAnalysis({
 				tool: selectedTool,
 				structureId: pdbMeta.id,
+				pdbFilename: pdbMeta.pdbFilename ?? pdbMeta.id,
 				chains: selectedChains,
 				biologicalAssembly: biologicalAssembly ?? undefined,
 				pdbContent: pdbMeta.pdbContent,
@@ -102,7 +103,7 @@
 				msaFilename: msaFilename ?? undefined,
 				params: { ...fieldValues, ...(mutations !== null ? { mutations: mutations.join(',') } : {}) }
 			});
-			addJob({ id, tool: selectedTool, structureId: pdbMeta.id });
+			addJob({ id, tool: selectedTool, structureId: pdbMeta.id, chains: selectedChains });
 			goto(`${base}/results/${id}`);
 		} finally {
 			submitting = false;

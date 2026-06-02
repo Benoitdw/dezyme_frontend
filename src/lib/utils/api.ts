@@ -5,6 +5,7 @@ export type JobStatus = 'pending' | 'running' | 'done' | 'error';
 export interface SubmitPayload {
 	tool: ToolId;
 	structureId: string;
+	pdbFilename?: string;
 	chains: string[];
 	biologicalAssembly?: number;
 	pdbContent?: string;
@@ -22,6 +23,7 @@ export interface JobStatusResponse {
 export interface JobPayloadSummary {
 	tool: ToolId;
 	structureId: string;
+	pdbFilename?: string;
 	chains: string[];
 	biologicalAssembly?: number;
 	params: Record<string, unknown>;

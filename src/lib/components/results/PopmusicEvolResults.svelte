@@ -432,15 +432,12 @@
 						<th class="num sortable" class:sort-active={tableSort.col === 'gap_ratio'} onclick={() => toggleSort('gap_ratio')}>
 							Gap Ratio <span class="sort-arrow">{tableSort.col === 'gap_ratio' ? (tableSort.dir === 1 ? '↑' : '↓') : '↕'}</span>
 						</th>
-						<th class="num sortable" class:sort-active={tableSort.col === 'meanDdg'} onclick={() => toggleSort('meanDdg')}>
-							Mean ΔΔG <span class="sort-arrow">{tableSort.col === 'meanDdg' ? (tableSort.dir === 1 ? '↑' : '↓') : '↕'}</span>
-						</th>
-						<th class="num sortable" class:sort-active={tableSort.col === 'meanDdgStr'} onclick={() => toggleSort('meanDdgStr')}>
-							Mean str <span class="sort-arrow">{tableSort.col === 'meanDdgStr' ? (tableSort.dir === 1 ? '↑' : '↓') : '↕'}</span>
-						</th>
-						<th class="num sortable" class:sort-active={tableSort.col === 'meanDdgStrEvol'} onclick={() => toggleSort('meanDdgStrEvol')}>
-							Mean str+evol <span class="sort-arrow">{tableSort.col === 'meanDdgStrEvol' ? (tableSort.dir === 1 ? '↑' : '↓') : '↕'}</span>
-						</th>
+						{#each (['ddg', 'ddgStr', 'ddgStrEvol'] as const) as key}
+							{@const col = key === 'ddg' ? 'meanDdg' : key === 'ddgStr' ? 'meanDdgStr' : 'meanDdgStrEvol'}
+							<th class="num sortable" class:sort-active={tableSort.col === col} onclick={() => toggleSort(col)}>
+								Mean {SCORE_LABELS[key]} <span class="sort-arrow">{tableSort.col === col ? (tableSort.dir === 1 ? '↑' : '↓') : '↕'}</span>
+							</th>
+						{/each}
 					</tr>
 				</thead>
 				<tbody>

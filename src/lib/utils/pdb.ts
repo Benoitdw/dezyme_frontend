@@ -9,6 +9,7 @@ export interface ChainInfo {
 export interface PdbMetadata {
 	id: string;
 	name: string;
+	pdbFilename?: string;  // original filename with extension (e.g. AF-P12345-F1-model_v4.pdb, 4HTC.pdb)
 	chains: string[];
 	resolution?: string;
 	organism?: string;
@@ -302,6 +303,7 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 		return {
 			id,
 			name: data.struct?.title ?? id,
+			pdbFilename: `${id}.pdb`,
 			chains: [...new Set(chains)].sort(),
 			resolution: data.refine?.[0]?.ls_d_res_high?.toString(),
 			organism: data.rcsb_entry_info?.source_organism_scientific_name,
@@ -343,6 +345,7 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 		return {
 			id: afId,
 			name: `AlphaFold model for ${uniprotId}`,
+			pdbFilename: pdbUrl.split('/').pop() ?? `${afId}.pdb`,
 			chains: chainInfo ? Object.keys(chainInfo).sort() : ['A'],
 			organism,
 			experimentType: 'Predicted',
@@ -356,7 +359,7 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 	throw new Error('Unknown input type');
 }
 
-export function parsePdbFile(content: string): PdbMetadata {
+export function parsePdbFile(content: string, filename?: string): PdbMetadata {
 	const lines = content.split('\n');
 
 	const chains = [...new Set(
@@ -396,6 +399,7 @@ export function parsePdbFile(content: string): PdbMetadata {
 	return {
 		id: 'custom',
 		name,
+		pdbFilename: filename,
 		chains,
 		rFactor,
 		residueCount: residueKeys.size || undefined,

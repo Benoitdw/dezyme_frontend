@@ -49,7 +49,7 @@
 		reader.onload = (e) => {
 			const content = e.target?.result as string;
 			try {
-				const meta = parsePdbFile(content);
+				const meta = parsePdbFile(content, file.name);
 				loadedMeta = meta;
 				selectedAssembly = null;
 				onBiologicalAssembly?.(null);
