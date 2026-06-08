@@ -15,7 +15,9 @@
 	let loading = $state(false);
 	let dragging = $state(false);
 	let loadedMeta = $state<PdbMetadata | null>(null);
+	let baseMeta = $state<PdbMetadata | null>(null);  // asymmetric unit (original fetch)
 	let selectedAssembly = $state<number | null>(null);  // null = asymmetric unit
+	let assemblyLoading = $state(false);
 
 	const typeLabel: Record<string, string> = {
 		'pdb-id': 'PDB ID detected',
@@ -32,6 +34,7 @@
 		try {
 			const meta = await fetchPdbMetadata(inputValue.trim(), detectedType);
 			loadedMeta = meta;
+			baseMeta = meta;
 			onLoaded(meta);
 		} catch (e) {
 			onError(e instanceof Error ? e.message : 'Failed to fetch structure');
@@ -61,9 +64,38 @@
 		reader.readAsText(file);
 	}
 
-	function selectAssembly(index: number | null) {
+	async function selectAssembly(index: number | null) {
 		selectedAssembly = index;
 		onBiologicalAssembly?.(index);
+
+		if (!baseMeta) return;
+
+		if (index === null) {
+			// Restore asymmetric unit
+			loadedMeta = baseMeta;
+			onLoaded(baseMeta);
+			return;
+		}
+
+		// Fetch the biological assembly PDB (e.g. 4HTC.pdb1)
+		const id = baseMeta.id.toUpperCase();
+		const filename = `${id}.pdb${index}`;
+		const url = `https://files.rcsb.org/download/${filename}`;
+		assemblyLoading = true;
+		try {
+			const res = await fetch(url);
+			if (!res.ok) throw new Error(`Assembly ${index} not available`);
+			const content = await res.text();
+			const assemblyMeta: PdbMetadata = { ...baseMeta, pdbContent: content, pdbFilename: filename };
+			loadedMeta = assemblyMeta;
+			onLoaded(assemblyMeta);
+		} catch (e) {
+			onError(e instanceof Error ? e.message : `Failed to fetch assembly ${index}`);
+			selectedAssembly = null;
+			onBiologicalAssembly?.(null);
+		} finally {
+			assemblyLoading = false;
+		}
 	}
 
 	function handleDrop(e: DragEvent) {
@@ -128,8 +160,9 @@
 						class="unit-btn"
 						class:active={selectedAssembly === i}
 						onclick={() => selectAssembly(i)}
+						disabled={assemblyLoading}
 						type="button"
-					>Assembly {i}</button>
+					>{assemblyLoading && selectedAssembly === i ? '…' : `Assembly ${i}`}</button>
 				{/each}
 			</div>
 		</div>

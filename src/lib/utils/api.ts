@@ -40,6 +40,9 @@ export async function submitAnalysis(payload: SubmitPayload): Promise<string> {
 		body: JSON.stringify(payload),
 	});
 	if (!res.ok) {
+		if (res.status === 413) {
+			throw new Error('Your input is too large to be processed. Please contact us if you need to analyse unusually large structures.');
+		}
 		const detail = await res.json().catch(() => ({ detail: res.statusText }));
 		throw new Error(detail.detail ?? res.statusText);
 	}

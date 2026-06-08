@@ -20,6 +20,7 @@
 	let selectedChains = $state<string[]>([]);
 	let pdbError = $state<string | null>(null);
 	let submitting = $state(false);
+	let submitError = $state<string | null>(null);
 	let transitioning = $state(false);
 	let fieldValues = $state<Record<string, string>>({});
 	let fieldErrors = $state<Record<string, string>>({});
@@ -91,6 +92,7 @@
 	async function handleSubmit() {
 		if (!pdbMeta || selectedChains.length === 0) return;
 		submitting = true;
+		submitError = null;
 		try {
 			const id = await submitAnalysis({
 				tool: selectedTool,
@@ -105,6 +107,8 @@
 			});
 			addJob({ id, tool: selectedTool, structureId: pdbMeta.id, chains: selectedChains });
 			goto(`${base}/results/${id}`);
+		} catch (e) {
+			submitError = e instanceof Error ? e.message : 'Submission failed. Please try again.';
 		} finally {
 			submitting = false;
 		}
@@ -242,6 +246,10 @@
 						onchange={(m) => (mutations = m)}
 					/>
 				</section>
+			{/if}
+
+			{#if submitError}
+				<p class="submit-error">{submitError}</p>
 			{/if}
 
 			<button
@@ -467,6 +475,16 @@
 	.error {
 		font-size: 0.85rem;
 		color: #ef4444;
+	}
+
+	.submit-error {
+		font-size: 0.875rem;
+		color: #ef4444;
+		background: color-mix(in srgb, #ef4444 8%, var(--surface));
+		border: 1px solid color-mix(in srgb, #ef4444 25%, transparent);
+		border-radius: 0.5rem;
+		padding: 0.75rem 1rem;
+		line-height: 1.5;
 	}
 
 	.submit-btn {
