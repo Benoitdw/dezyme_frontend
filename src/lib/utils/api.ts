@@ -31,7 +31,7 @@ export interface JobPayloadSummary {
 	msa?: { filename: string; lines: number; bytes: number };
 }
 
-const API = '/api';
+const API = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/api`;
 
 export async function submitAnalysis(payload: SubmitPayload): Promise<string> {
 	const res = await fetch(`${API}/analysis`, {
