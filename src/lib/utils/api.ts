@@ -31,7 +31,15 @@ export interface JobPayloadSummary {
 	msa?: { filename: string; lines: number; bytes: number };
 }
 
-const API = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/api`;
+export interface PopMusicResultUrls {
+	mutations_csv: string | null;
+	pdb: string | null;
+	fasta: string | null;
+	metadata_json: string | null;
+}
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+const API = `${BASE}/api`;
 
 export async function submitAnalysis(payload: SubmitPayload): Promise<string> {
 	const res = await fetch(`${API}/analysis`, {
@@ -68,4 +76,27 @@ export async function getJobLogs(analysisId: string): Promise<string | null> {
 	const res = await fetch(`${API}/analysis/${analysisId}/logs`);
 	if (!res.ok) return null;
 	return res.text();
+}
+
+export async function getJobResultUrls(analysisId: string): Promise<PopMusicResultUrls | null> {
+	const res = await fetch(`${API}/analysis/${analysisId}/results`);
+	if (!res.ok) return null;
+	const data = await res.json();
+	const prefix = (path: string | null) => (path ? `${BASE}${path}` : null);
+	return {
+		mutations_csv:  prefix(data.mutations_csv),
+		pdb:            prefix(data.pdb),
+		fasta:          prefix(data.fasta),
+		metadata_json:  prefix(data.metadata_json),
+	};
+}
+
+export async function fetchOutputFileText(url: string): Promise<string> {
+	const res = await fetch(url);
+	if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
+	return res.text();
+}
+
+export function getDownloadUrl(analysisId: string): string {
+	return `${API}/analysis/${analysisId}/download`;
 }

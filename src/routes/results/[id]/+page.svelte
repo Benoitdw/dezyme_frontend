@@ -3,7 +3,7 @@
 	import { base } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { tools } from '$lib/tools';
-	import { getJobStatus, getJobPayload, getJobLogs } from '$lib/utils/api';
+	import { getJobStatus, getJobPayload, getJobLogs, getJobResultUrls, fetchOutputFileText, getDownloadUrl } from '$lib/utils/api';
 	import { parseMutationsCSV } from '$lib/utils/popmusic';
 	import type { JobPayloadSummary, JobStatus } from '$lib/utils/api';
 	import type { EvolMutationRow } from '$lib/utils/popmusic';
@@ -55,16 +55,13 @@
 	async function loadResults(p: JobPayloadSummary) {
 		if (p.tool !== 'popmusic') return;
 
-		const res = await fetch(`/api/analysis/${analysisId}/results`);
-		if (!res.ok) return;
-		const urls = await res.json();
-
-		if (!urls.mutations_csv || !urls.pdb || !urls.metadata_json) return;
+		const urls = await getJobResultUrls(analysisId);
+		if (!urls || !urls.mutations_csv || !urls.pdb || !urls.metadata_json) return;
 
 		const [mutationsText, metadataText, fastaContent] = await Promise.all([
-			fetch(urls.mutations_csv).then((r) => r.text()),
-			fetch(urls.metadata_json).then((r) => r.text()),
-			urls.fasta ? fetch(urls.fasta).then((r) => r.text()) : Promise.resolve(null),
+			fetchOutputFileText(urls.mutations_csv),
+			fetchOutputFileText(urls.metadata_json),
+			urls.fasta ? fetchOutputFileText(urls.fasta) : Promise.resolve(null),
 		]);
 
 		const metadata = JSON.parse(metadataText);
@@ -73,7 +70,7 @@
 			mutations:    parseMutationsCSV(mutationsText),
 			pdbUrl:       urls.pdb,
 			fastaContent,
-			zipUrl:       `/api/analysis/${analysisId}/download`,
+			zipUrl:       getDownloadUrl(analysisId),
 			lambda:        metadata.struct_vs_evol_models_lambda ?? 1,
 			msaNtot:       metadata.msa_Ntot ?? null,
 			sigSlope:      metadata.struct_vs_evol_models_sigmoid_slope  ?? null,
@@ -95,7 +92,7 @@
 			status = res.status;
 			if (res.error) error = res.error;
 
-			if (status === 'running' && prev !== 'running') {
+			if (status === 'running') {
 				startLogPolling();
 			}
 			if (status === 'done' || status === 'error') {
