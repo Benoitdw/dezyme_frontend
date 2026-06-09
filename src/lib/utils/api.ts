@@ -81,7 +81,8 @@ export async function getJobLogs(analysisId: string): Promise<string | null> {
 export async function getJobResultUrls(analysisId: string): Promise<PopMusicResultUrls | null> {
 	const res = await fetch(`${API}/analysis/${analysisId}/results`);
 	if (!res.ok) return null;
-	const data = await res.json();
+	const data = await res.json().catch(() => null);
+	if (!data) return null;
 	const prefix = (path: string | null) => (path ? `${BASE}${path}` : null);
 	return {
 		mutations_csv:  prefix(data.mutations_csv),
