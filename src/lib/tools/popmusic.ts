@@ -25,5 +25,5 @@ export const popmusic: ToolConfig = {
   pages   = {W448--W455},
   doi     = {10.1093/nar/gkr353}
 }`,
-	logoPath: '/logos/popmusic.svg'
+	logoPath: '/logos/popmusic.png'
 };
