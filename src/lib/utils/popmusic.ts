@@ -9,9 +9,9 @@ export interface EvolMutationRow {
 	secondary_structure: string;
 	pLDDT: number;
 	gap_ratio: number;
-	ddg: number;        // PoPMuSiCv3 — final combined score
-	ddgStr: number;     // PoPMuSiCv3_str — structure-only score
-	ddgStrEvol: number; // PoPMuSiCv3_str+evol
+	ddg: number;        // DDG_predicted — final combined score
+	ddgStr: number;     // DDG_predicted_str — structure-only score
+	ddgStrEvol: number; // DDG_predicted_str+evol
 	StructureDCA: number;
 	StructureDCAn: number;
 	SaProt: number;
@@ -57,9 +57,9 @@ export function parseMutationsCSV(text: string): EvolMutationRow[] {
 		secondary_structure: idx('secondary_structure'),
 		pLDDT:              idx('pLDDT'),
 		gap_ratio:          idx('gap_ratio'),
-		ddg:                idx('PoPMuSiCv3'),
-		ddgStr:             idx('PoPMuSiCv3_str'),
-		ddgStrEvol:         idx('PoPMuSiCv3_str+evol'),
+		ddg:                idx('DDG_predicted'),
+		ddgStr:             idx('DDG_predicted_str'),
+		ddgStrEvol:         idx('DDG_predicted_str+evol'),
 		StructureDCA:       idx('StructureDCA'),
 		StructureDCAn:      idx('StructureDCAn'),
 		SaProt:             idx('SaProt'),
