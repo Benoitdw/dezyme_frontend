@@ -103,7 +103,14 @@
 				pdbContent: pdbMeta.pdbContent,
 				msaContent: msaContent ?? undefined,
 				msaFilename: msaFilename ?? undefined,
-				params: { ...fieldValues, ...(mutations !== null ? { mutations: mutations.join(',') } : {}) }
+				params: {
+					...Object.fromEntries(
+						Object.entries(fieldValues)
+							.filter(([, v]) => v !== '')
+							.map(([k, v]) => [k, parseFloat(v)])
+					),
+					...(mutations !== null ? { mutations } : {})
+				}
 			});
 			addJob({ id, tool: selectedTool, structureId: pdbMeta.id, chains: selectedChains });
 			goto(`${base}/results/${id}`);
