@@ -3,13 +3,18 @@
 	import { base } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { tools } from '$lib/tools';
-	import { getJobStatus, getJobPayload, getJobLogs, getJobResultUrls, fetchOutputFileText, getDownloadUrl } from '$lib/utils/api';
+	import { getJobStatus, getJobPayload, getJobLogs, getJobResultUrls, getHotmusicResultUrls, fetchOutputFileText, getDownloadUrl } from '$lib/utils/api';
 	import { parseMutationsCSV } from '$lib/utils/popmusic';
+	import { parseHotFile, parseHotsFile } from '$lib/utils/hotmusic';
+	import { parsePdbFile } from '$lib/utils/pdb';
 	import type { JobPayloadSummary, JobStatus } from '$lib/utils/api';
 	import type { EvolMutationRow } from '$lib/utils/popmusic';
+	import type { HotSummaryRow, HotMutationRow } from '$lib/utils/hotmusic';
+	import type { PdbMetadata } from '$lib/utils/pdb';
 	import ProteinPending from '$lib/components/ProteinPending.svelte';
 	import DiffuseSineHorizon from '$lib/components/DiffuseSineHorizon.svelte';
 	import PopmusicEvolResults from '$lib/components/results/PopmusicEvolResults.svelte';
+	import HotmusicResults from '$lib/components/results/HotmusicResults.svelte';
 	import JobLogs from '$lib/components/JobLogs.svelte';
 
 	const analysisId = $page.params.id ?? '';
@@ -34,7 +39,17 @@
 		sigCenter: number | null;
 		clipThreshold: number | null;
 	}
-	let results = $state<Results | null>(null);
+
+	interface HotResults {
+		summary: HotSummaryRow[];
+		mutations: HotMutationRow[];
+		meta: PdbMetadata;
+		pdbUrl: string;
+		downloadUrls: { hot: string | null; hots: string | null; pdb: string | null };
+	}
+
+	let results    = $state<Results | null>(null);
+	let hotResults = $state<HotResults | null>(null);
 	let jobLog  = $state<string | null>(null);
 
 	async function loadLog() {
@@ -53,30 +68,47 @@
 	}
 
 	async function loadResults(p: JobPayloadSummary) {
-		if (p.tool !== 'popmusic') return;
+		if (p.tool === 'popmusic') {
+			const urls = await getJobResultUrls(analysisId);
+			if (!urls || !urls.mutations_csv || !urls.pdb || !urls.metadata_json) return;
 
-		const urls = await getJobResultUrls(analysisId);
-		if (!urls || !urls.mutations_csv || !urls.pdb || !urls.metadata_json) return;
+			const [mutationsText, metadataText, fastaContent] = await Promise.all([
+				fetchOutputFileText(urls.mutations_csv),
+				fetchOutputFileText(urls.metadata_json),
+				urls.fasta ? fetchOutputFileText(urls.fasta) : Promise.resolve(null),
+			]);
 
-		const [mutationsText, metadataText, fastaContent] = await Promise.all([
-			fetchOutputFileText(urls.mutations_csv),
-			fetchOutputFileText(urls.metadata_json),
-			urls.fasta ? fetchOutputFileText(urls.fasta) : Promise.resolve(null),
-		]);
+			const metadata = JSON.parse(metadataText);
 
-		const metadata = JSON.parse(metadataText);
+			results = {
+				mutations:    parseMutationsCSV(mutationsText),
+				pdbUrl:       urls.pdb,
+				fastaContent,
+				zipUrl:       getDownloadUrl(analysisId),
+				lambda:        metadata.struct_vs_evol_models_lambda ?? 1,
+				msaNtot:       metadata.msa_Ntot ?? null,
+				sigSlope:      metadata.struct_vs_evol_models_sigmoid_slope  ?? null,
+				sigCenter:     metadata.struct_vs_evol_models_sigmoid_center ?? null,
+				clipThreshold: metadata.struct_vs_evol_models_clip_threshold ?? null,
+			};
+		} else if (p.tool === 'hotmusic') {
+			const urls = await getHotmusicResultUrls(analysisId);
+			if (!urls || !urls.hot || !urls.hots || !urls.pdb) return;
 
-		results = {
-			mutations:    parseMutationsCSV(mutationsText),
-			pdbUrl:       urls.pdb,
-			fastaContent,
-			zipUrl:       getDownloadUrl(analysisId),
-			lambda:        metadata.struct_vs_evol_models_lambda ?? 1,
-			msaNtot:       metadata.msa_Ntot ?? null,
-			sigSlope:      metadata.struct_vs_evol_models_sigmoid_slope  ?? null,
-			sigCenter:     metadata.struct_vs_evol_models_sigmoid_center ?? null,
-			clipThreshold: metadata.struct_vs_evol_models_clip_threshold ?? null,
-		};
+			const [hotsText, hotText, pdbText] = await Promise.all([
+				fetchOutputFileText(urls.hots),
+				fetchOutputFileText(urls.hot),
+				fetchOutputFileText(urls.pdb),
+			]);
+
+			hotResults = {
+				summary:   parseHotsFile(hotsText),
+				mutations: parseHotFile(hotText),
+				meta:      parsePdbFile(pdbText),
+				pdbUrl:    urls.pdb,
+				downloadUrls: { hot: urls.hot, hots: urls.hots, pdb: urls.pdb },
+			};
+		}
 	}
 
 	function stopAll() {
@@ -153,6 +185,18 @@
 		title={payload.structureId}
 		subtitle={analysisId}
 		backUrl="/run?tool=popmusic"
+	/>
+{:else if status === 'done' && hotResults && payload}
+	<HotmusicResults
+		summary={hotResults.summary}
+		mutations={hotResults.mutations}
+		meta={hotResults.meta}
+		pdbUrl={hotResults.pdbUrl}
+		downloadUrls={hotResults.downloadUrls}
+		logContent={jobLog}
+		title={payload.structureId}
+		subtitle={analysisId}
+		backUrl="/run?tool=hotmusic"
 	/>
 {:else}
 	<div class="page">

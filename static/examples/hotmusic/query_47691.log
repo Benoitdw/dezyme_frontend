@@ -1,0 +1,61 @@
+Warning@ PROT_computeChainCuts: Chain cut detected between residues A  39 (ARG) and A  47 (GLU).
+Warning@ PROT_computeChainCuts: Chain cut detected between residues B  42 (ALA) and B  49 (GLN).
+Warning@ PROT_computePhiPsiOmega: Missing atom coordinates for residue A  39 (ARG) : diedral angle PSI not computed.
+Warning@ PROT_computePhiPsiOmega: Missing atom coordinates for residue A  39 (ARG) : diedral angle OMEGA not computed.
+Warning@ PROT_computePhiPsiOmega: Missing atom coordinates for residue A  47 (GLU) : diedral angle PHI not computed.
+Warning@ PROT_computePhiPsiOmega: Missing atom coordinates for residue B  42 (ALA) : diedral angle PSI not computed.
+Warning@ PROT_computePhiPsiOmega: Missing atom coordinates for residue B  42 (ALA) : diedral angle OMEGA not computed.
+Warning@ PROT_computePhiPsiOmega: Missing atom coordinates for residue B  49 (GLN) : diedral angle PHI not computed.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue A 135 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue A 152 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue A 154 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue A 172 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue A 184 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue A 227 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue A 233 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue A 247 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue A 251 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue A 271 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue B 135 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue B 152 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue B 154 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue B 172 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue B 184 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue B 227 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue B 233 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue B 247 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue B 251 (MSE) : CMR is unreliable.
+Warning@ PROT_computeCMR: Half or more (10) sidechain coordinates are missing for residue B 271 (MSE) : CMR is unreliable.
+Warning@ ACCSOL_surface: Surfmax not available for residue A 135 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue A 152 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue A 154 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue A 172 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue A 184 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue A 227 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue A 233 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue A 247 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue A 251 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue A 271 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue B 135 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue B 152 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue B 154 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue B 172 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue B 184 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue B 227 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue B 233 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue B 247 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue B 251 (MSE) : relative accessibility not computed.
+Warning@ ACCSOL_surface: Surfmax not available for residue B 271 (MSE) : relative accessibility not computed.
+Warning@ STRUCT2_init: In residue A  47 (GLU): C to N distance > 2.500000.
+Warning@ STRUCT2_init: In residue B  49 (GLN): C to N distance > 2.500000.
+Warning@ HOTMUSIC_all: Residue A 135  is not managed and will be skipped.
+Warning@ HOTMUSIC_all: Residue A 152  is not managed and will be skipped.
+Warning@ HOTMUSIC_all: Residue A 154  is not managed and will be skipped.
+Warning@ HOTMUSIC_all: Residue A 172  is not managed and will be skipped.
+Warning@ HOTMUSIC_all: Residue A 184  is not managed and will be skipped.
+Warning@ HOTMUSIC_all: Residue A 227  is not managed and will be skipped.
+Warning@ HOTMUSIC_all: Residue A 233  is not managed and will be skipped.
+Warning@ HOTMUSIC_all: Residue A 247  is not managed and will be skipped.
+Warning@ HOTMUSIC_all: Residue A 251  is not managed and will be skipped.
+Warning@ HOTMUSIC_all: Residue A 271  is not managed and will be skipped.
+EXIT@ main: Status = 0.

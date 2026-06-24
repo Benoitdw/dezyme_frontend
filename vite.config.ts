@@ -8,6 +8,10 @@ export default defineConfig({
 		host: '0.0.0.0',
 		port: 5173,
 		proxy: {
+			'/dezyme/api': {
+				target: 'http://backend:8000',
+				rewrite: (path) => path.replace(/^\/dezyme/, '')
+			},
 			'/api': 'http://backend:8000'
 		}
 	},

@@ -38,6 +38,12 @@ export interface PopMusicResultUrls {
 	metadata_json: string | null;
 }
 
+export interface HotMusicResultUrls {
+	hot: string | null;
+	hots: string | null;
+	pdb: string | null;
+}
+
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 const API = `${BASE}/api`;
 
@@ -89,6 +95,19 @@ export async function getJobResultUrls(analysisId: string): Promise<PopMusicResu
 		pdb:            prefix(data.pdb),
 		fasta:          prefix(data.fasta),
 		metadata_json:  prefix(data.metadata_json),
+	};
+}
+
+export async function getHotmusicResultUrls(analysisId: string): Promise<HotMusicResultUrls | null> {
+	const res = await fetch(`${API}/analysis/${analysisId}/results`);
+	if (!res.ok) return null;
+	const data = await res.json().catch(() => null);
+	if (!data) return null;
+	const prefix = (path: string | null) => (path ? `${BASE}${path}` : null);
+	return {
+		hot:  prefix(data.hot),
+		hots: prefix(data.hots),
+		pdb:  prefix(data.pdb),
 	};
 }
 
