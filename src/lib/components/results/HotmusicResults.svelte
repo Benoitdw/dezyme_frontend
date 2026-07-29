@@ -3,7 +3,7 @@
 	import { theme } from '$lib/stores/theme';
 	import PdbMetadata from '$lib/components/pdb/PdbMetadata.svelte';
 	import ProteinViewer from '$lib/components/ProteinViewer.svelte';
-	import MutationHeatmap, { ddgColor, rsaColor } from '$lib/components/MutationHeatmap.svelte';
+	import MutationHeatmap, { dtmColor, rsaColor } from '$lib/components/MutationHeatmap.svelte';
 	import type { HeatmapRowDef, ColorbarDef } from '$lib/components/MutationHeatmap.svelte';
 	import type { HotSummaryRow, HotMutationRow } from '$lib/utils/hotmusic';
 	import type { Chart as ChartType } from 'chart.js';
@@ -32,8 +32,8 @@
 	const displaySubtitle = $derived(subtitle ?? '');
 
 	const SS_LABELS: Record<string, string> = {
-		H: 'Helix', G: '310-Helix', I: 'π-Helix',
-		E: 'Sheet', B: 'Bridge', T: 'Turn', S: 'Bend', C: 'Coil'
+		H: 'Helix (H)', G: '310-Helix (G)', I: 'π-Helix (I)',
+		E: 'Sheet (E)', B: 'Bridge (B)', T: 'Turn (T)', S: 'Bend (S)', C: 'Coil (C)'
 	};
 
 	const AA_ORDER = ['A','C','D','E','F','G','H','I','K','L','M','N','P','Q','R','S','T','V','W','Y'];
@@ -43,24 +43,24 @@
 	};
 
 	// ── Color helpers ────────────────────────────────────────────────────────
+	// Negative ΔTm → green, positive ΔTm → red.
 	function dtmHex(v: number): string {
-		if (v > 0.5)  return '#22c55e';
-		if (v > 0)    return '#86efac';
-		if (v > -0.5) return '#fb923c';
-		return '#ef4444';
+		if (v > 0.5)  return '#ef4444';
+		if (v > 0)    return '#fb923c';
+		if (v > -0.5) return '#86efac';
+		return '#22c55e';
 	}
 
 	function dtmColorChart(v: number, alpha = 0.85): string {
-		if (v > 0.5)  return `rgba(34,197,94,${alpha})`;
-		if (v > 0)    return `rgba(134,239,172,${alpha})`;
-		if (v > -0.5) return `rgba(251,146,60,${alpha})`;
-		return `rgba(239,68,68,${alpha})`;
+		if (v > 0.5)  return `rgba(239,68,68,${alpha})`;
+		if (v > 0)    return `rgba(251,146,60,${alpha})`;
+		if (v > -0.5) return `rgba(134,239,172,${alpha})`;
+		return `rgba(34,197,94,${alpha})`;
 	}
 
-	// Heatmap colorFn: positive ΔTm (stabilizing) → blue, negative → red
-	// Same visual language as popmusic (negate v so sign convention aligns with ddgColor)
+	// Heatmap colorFn: negative ΔTm → green, positive ΔTm → red
 	function hmDtmColor(v: number, vmin: number, vmax: number, dark: boolean): [number, number, number] {
-		return ddgColor(-v, vmin, vmax, dark);
+		return dtmColor(v, vmin, vmax, dark);
 	}
 
 	function dtmClass(v: number): string {
@@ -252,15 +252,14 @@
 	});
 
 	// ── 3D viewer ────────────────────────────────────────────────────────────
-	let showViewer = $state(false);
-	let everOpened = $state(false);
 	let selectedResidues = $state(new Set<string>());
-	let floatX = $state(0);
-	let floatY = $state(0);
-	$effect(() => { if (showViewer) everOpened = true; });
 
+	// Default (before the user touches the Avg ΔTm filter) shows only stabilizing residues.
 	const viewerResidues = $derived(
-		filteredSummary.map((r) => ({
+		(_dtmMin === null && _dtmMax === null
+			? filteredSummary.filter((r) => r.avgDtm > 0)
+			: filteredSummary
+		).map((r) => ({
 			chain: r.chain,
 			resNum: r.resNum,
 			color: dtmHex(r.avgDtm),
@@ -274,33 +273,16 @@
 		selectedResidues = next;
 	}
 
-	let dragOffX = 0, dragOffY = 0;
-	function startDrag(e: PointerEvent) {
-		if ((e.target as HTMLElement).closest('button')) return;
-		dragOffX = e.clientX - floatX;
-		dragOffY = e.clientY - floatY;
-		window.addEventListener('pointermove', onDrag);
-		window.addEventListener('pointerup', stopDrag, { once: true });
-		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-	}
-	function onDrag(e: PointerEvent) {
-		floatX = Math.max(0, Math.min(window.innerWidth - 420, e.clientX - dragOffX));
-		floatY = Math.max(0, Math.min(window.innerHeight - 380, e.clientY - dragOffY));
-	}
-	function stopDrag() { window.removeEventListener('pointermove', onDrag); }
-
 	// ── Charts ───────────────────────────────────────────────────────────────
 	let canvasProfile = $state<HTMLCanvasElement | undefined>();
-	let canvasScatter = $state<HTMLCanvasElement | undefined>();
 	let canvasDist    = $state<HTMLCanvasElement | undefined>();
 
-	type ModalChart = 'profile' | 'scatter' | 'dist';
+	type ModalChart = 'profile' | 'dist';
 	let modalChart  = $state<ModalChart | null>(null);
 	let canvasModal = $state<HTMLCanvasElement | undefined>();
 
 	const MODAL_TITLES: Record<ModalChart, string> = {
 		profile: 'Mutation sensitivity profile',
-		scatter: 'Accessibility vs mutation effect',
 		dist:    'ΔTm distribution',
 	};
 
@@ -363,13 +345,6 @@
 		modalZoomSize = null; modalZoomStart = 0;
 	}
 
-	const SS_COLORS: Record<string, string> = {
-		H: '#8b5cf6', G: '#7c3aed', I: '#6d28d9',
-		E: '#f59e0b', B: '#d97706',
-		T: '#06b6d4', S: '#0891b2',
-		C: '#94a3b8'
-	};
-
 	function chartColors() {
 		const isDark = $theme === 'dark';
 		return {
@@ -385,40 +360,14 @@
 			type: 'bar',
 			data: {
 				labels: rows.map((r) => `${r.chain}${r.resNum}`),
-				datasets: [{ data: rows.map((r) => r.avgDtm), backgroundColor: rows.map((r) => dtmColorChart(r.avgDtm)), borderWidth: 0, barPercentage: 0.85 }]
+				datasets: [{ data: rows.map((r) => r.sumPosDtm), backgroundColor: rows.map((r) => dtmColorChart(r.sumPosDtm)), borderWidth: 0, barPercentage: 0.85 }]
 			},
 			options: {
 				responsive: true, maintainAspectRatio: false, animation: false,
 				plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${(ctx.raw as number) > 0 ? '+' : ''}${(ctx.raw as number).toFixed(2)} K` } } },
 				scales: {
 					x: { ticks: { color: c.text, maxTicksLimit: 15, font: { size: 11 } }, grid: { display: false } },
-					y: { ticks: { color: c.text, font: { size: 11 } }, grid: { color: c.grid }, border: { color: c.zero }, title: { display: true, text: 'Avg ΔTm (K)', color: c.text, font: { size: 11 } } }
-				}
-			}
-		});
-	}
-
-	function makeScatterChart(canvas: HTMLCanvasElement, rows: HotSummaryRow[], C = Chart!) {
-		const c = chartColors();
-		const bySS = new Map<string, { x: number; y: number; label: string }[]>();
-		for (const r of rows) {
-			if (!bySS.has(r.secStruct)) bySS.set(r.secStruct, []);
-			bySS.get(r.secStruct)!.push({ x: r.accessibility, y: r.avgDtm, label: `${r.chain}${r.resNum} ${r.resName}` });
-		}
-		const datasets = [...bySS.entries()].map(([ss, pts]) => ({
-			label: SS_LABELS[ss] ?? ss,
-			data: pts,
-			backgroundColor: `${SS_COLORS[ss] ?? '#94a3b8'}cc`,
-			pointRadius: 3, pointHoverRadius: 5
-		}));
-		return new C(canvas, {
-			type: 'scatter', data: { datasets },
-			options: {
-				responsive: true, maintainAspectRatio: false, animation: false,
-				plugins: { legend: { position: 'bottom', labels: { color: c.text, boxWidth: 10, font: { size: 10 } } }, tooltip: { callbacks: { label: (ctx) => { const pt = ctx.raw as { x: number; y: number; label: string }; return `${pt.label}: acc=${pt.x.toFixed(1)}% ΔTm=${pt.y > 0 ? '+' : ''}${pt.y.toFixed(2)} K`; } } } },
-				scales: {
-					x: { ticks: { color: c.text, font: { size: 11 } }, grid: { color: c.grid }, title: { display: true, text: 'Solvent accessibility (%)', color: c.text, font: { size: 11 } } },
-					y: { ticks: { color: c.text, font: { size: 11 } }, grid: { color: c.grid }, border: { color: c.zero }, title: { display: true, text: 'Avg ΔTm (K)', color: c.text, font: { size: 11 } } }
+					y: { ticks: { color: c.text, font: { size: 11 } }, grid: { color: c.grid }, border: { color: c.zero }, title: { display: true, text: 'Sum of positive ΔTm (K)', color: c.text, font: { size: 11 } } }
 				}
 			}
 		});
@@ -435,7 +384,7 @@
 		const labels = bins.map((_, i) => (LO + i * BIN).toFixed(1));
 		return new C(canvas, {
 			type: 'bar',
-			data: { labels, datasets: [{ data: bins, backgroundColor: labels.map((l) => parseFloat(l) < 0 ? 'rgba(239,68,68,0.75)' : 'rgba(34,197,94,0.75)'), borderWidth: 0, barPercentage: 1.0, categoryPercentage: 1.0 }] },
+			data: { labels, datasets: [{ data: bins, backgroundColor: labels.map((l) => parseFloat(l) < 0 ? 'rgba(34,197,94,0.75)' : 'rgba(239,68,68,0.75)'), borderWidth: 0, barPercentage: 1.0, categoryPercentage: 1.0 }] },
 			options: {
 				responsive: true, maintainAspectRatio: false, animation: false,
 				plugins: { legend: { display: false }, tooltip: { callbacks: { title: (ctx) => `ΔTm ≈ ${ctx[0].label} K`, label: (ctx) => ` ${ctx.raw} mutations` } } },
@@ -448,25 +397,21 @@
 	}
 
 	$effect(() => { if (!Chart || !canvasProfile) return; const rows = filteredSummary; void $theme; const chart = makeProfileChart(canvasProfile, rows); return () => chart.destroy(); });
-	$effect(() => { if (!Chart || !canvasScatter) return; const rows = filteredSummary; void $theme; const chart = makeScatterChart(canvasScatter, rows); return () => chart.destroy(); });
 	$effect(() => { if (!Chart || !canvasDist) return; const muts = filteredMutations; void $theme; const chart = makeDistChart(canvasDist, muts); return () => chart.destroy(); });
 	$effect(() => {
 		if (!Chart || !canvasModal || !modalChart) return;
 		void $theme;
 		const chart = modalChart === 'profile' ? makeProfileChart(canvasModal, modalProfileData)
-			: modalChart === 'scatter' ? makeScatterChart(canvasModal, filteredSummary)
 			: makeDistChart(canvasModal, filteredMutations);
 		return () => chart.destroy();
 	});
 
 	onMount(() => {
-		floatX = Math.max(16, window.innerWidth - 452);
-		floatY = Math.max(16, window.innerHeight - 420);
 		import('chart.js').then(({ Chart: C, registerables }) => {
 			C.register(...registerables);
 			Chart = C as unknown as typeof ChartType;
 		});
-		const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { modalChart = null; showViewer = false; } };
+		const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') modalChart = null; };
 		document.addEventListener('keydown', onKey);
 		return () => document.removeEventListener('keydown', onKey);
 	});
@@ -526,14 +471,6 @@
 				Log
 			</button>
 		{/if}
-		<div class="tabs-spacer"></div>
-		<button class="tab-3d" class:tab-3d-active={showViewer} onclick={() => (showViewer = !showViewer)}>
-			<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-				<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
-			</svg>
-			3D
-			{#if selectedResidues.size > 0}<span class="tab-3d-badge">{selectedResidues.size}</span>{/if}
-		</button>
 	</div>
 
 	<!-- Filters -->
@@ -577,25 +514,42 @@
 	{#if tab === 'summary'}
 		<div class="charts-section">
 			<div class="charts-grid">
-				{#each ([['profile', 'Mutation sensitivity profile', 'Average ΔTm per position — peaks highlight thermosensitive hotspots'], ['scatter', 'Accessibility vs mutation effect', 'Core residues (low accessibility) tend to be more sensitive to mutations'], ['dist', 'ΔTm distribution', 'Distribution of all individual mutation effects — most mutations are destabilizing']] as const) as [id, title, sub]}
-					<div class="chart-card" class:chart-clickable={id !== 'scatter'}
-						role={id !== 'scatter' ? 'button' : undefined}
-						tabindex={id !== 'scatter' ? 0 : undefined}
-						onclick={id !== 'scatter' ? () => (modalChart = id) : undefined}
-						onkeydown={id !== 'scatter' ? (e) => e.key === 'Enter' && (modalChart = id) : undefined}
-					>
-						<div class="chart-card-header">
-							<div class="chart-title">{title}</div>
-							{#if id !== 'scatter'}<span class="chart-expand-hint">⤢ expand</span>{/if}
-						</div>
-						<div class="chart-sub">{sub}</div>
-						<div class="chart-wrap">
-							{#if id === 'profile'}<canvas bind:this={canvasProfile}></canvas>
-							{:else if id === 'scatter'}<canvas bind:this={canvasScatter}></canvas>
-							{:else}<canvas bind:this={canvasDist}></canvas>{/if}
-						</div>
+				<div class="chart-card chart-clickable" role="button" tabindex="0"
+					onclick={() => (modalChart = 'profile')}
+					onkeydown={(e) => e.key === 'Enter' && (modalChart = 'profile')}
+				>
+					<div class="chart-card-header">
+						<div class="chart-title">Mutation sensitivity profile</div>
+						<span class="chart-expand-hint">⤢ expand</span>
 					</div>
-				{/each}
+					<div class="chart-sub">Sum of positive ΔTm per position — peaks highlight positions tolerant to stabilizing mutations</div>
+					<div class="chart-wrap"><canvas bind:this={canvasProfile}></canvas></div>
+				</div>
+
+				<div class="chart-card viewer-card">
+					<div class="chart-card-header">
+						<div class="chart-title">3D structure</div>
+						{#if selectedResidues.size > 0}
+							<button class="viewer-clear" onclick={() => (selectedResidues = new Set())}>Clear ({selectedResidues.size})</button>
+						{/if}
+					</div>
+					<div class="chart-sub">Stabilizing residues shown by default — adjust the Avg ΔTm filter to change</div>
+					<div style="margin-top: 0.5rem;">
+						<ProteinViewer {pdbUrl} residues={viewerResidues} height="230px" />
+					</div>
+				</div>
+
+				<div class="chart-card chart-clickable" role="button" tabindex="0"
+					onclick={() => (modalChart = 'dist')}
+					onkeydown={(e) => e.key === 'Enter' && (modalChart = 'dist')}
+				>
+					<div class="chart-card-header">
+						<div class="chart-title">ΔTm distribution</div>
+						<span class="chart-expand-hint">⤢ expand</span>
+					</div>
+					<div class="chart-sub">Distribution of all individual mutation effects — most mutations are destabilizing</div>
+					<div class="chart-wrap"><canvas bind:this={canvasDist}></canvas></div>
+				</div>
 			</div>
 		</div>
 
@@ -630,9 +584,9 @@
 							<td class="res-cell">{row.resName}</td>
 							<td><span class="ss-badge ss-{row.secStruct}">{SS_LABELS[row.secStruct] ?? row.secStruct}</span></td>
 							<td class="num">{row.accessibility.toFixed(1)}%</td>
-							<td class="num"><span class="dtm-pill {dtmClass(row.avgDtm)}">{row.avgDtm > 0 ? '+' : ''}{row.avgDtm.toFixed(2)} K</span></td>
-							<td class="num red-val">{row.sumNegDtm.toFixed(2)}</td>
-							<td class="num green-val">{row.sumPosDtm.toFixed(2)}</td>
+							<td class="num">{row.avgDtm > 0 ? '+' : ''}{row.avgDtm.toFixed(2)} K</td>
+							<td class="num green-val">{row.sumNegDtm.toFixed(2)}</td>
+							<td class="num"><span class="dtm-pill {dtmClass(row.sumPosDtm)}">{row.sumPosDtm > 0 ? '+' : ''}{row.sumPosDtm.toFixed(2)}</span></td>
 						</tr>
 						{#if isOpen}
 							<tr class="detail-row">
@@ -676,7 +630,7 @@
 			<div class="heatmap-card">
 				<div class="heatmap-card-header">
 					<span class="heatmap-title">Mutation effect map</span>
-					<span class="heatmap-sub">ΔTm (K) per position and amino acid substitution — blue = stabilizing (ΔTm &gt; 0), red = destabilizing (ΔTm &lt; 0)</span>
+					<span class="heatmap-sub">ΔTm (K) per position and amino acid substitution — green = ΔTm &lt; 0, red = ΔTm &gt; 0</span>
 				</div>
 				<MutationHeatmap
 					positions={hmPositions}
@@ -694,28 +648,6 @@
 		<JobLogs content={logContent} />
 	{/if}
 </div>
-
-<!-- Floating 3D viewer -->
-{#if everOpened}
-	<div class="float-panel" class:float-hidden={!showViewer} style="left: {floatX}px; top: {floatY}px" role="dialog" aria-label="3D Structure viewer">
-		<div class="float-header" onpointerdown={startDrag} role="toolbar" aria-label="Drag to move" tabindex="0">
-			<span class="float-title">
-				<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-					<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
-				</svg>
-				{meta.id}
-			</span>
-			{#if selectedResidues.size > 0}
-				<span class="float-sel">{selectedResidues.size} highlighted</span>
-				<button class="float-clear" onclick={() => (selectedResidues = new Set())}>Clear</button>
-			{/if}
-			<button class="float-close" onclick={() => (showViewer = false)} aria-label="Close">✕</button>
-		</div>
-		<div class="float-body">
-			<ProteinViewer {pdbUrl} residues={viewerResidues} height="340px" />
-		</div>
-	</div>
-{/if}
 
 <!-- Chart modal -->
 {#if modalChart}
@@ -748,21 +680,9 @@
 <style>
 	.page { max-width: 1100px; margin: 0 auto; padding: 2.5rem 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
 	.tabs-spacer { flex: 1; }
-	.tab-3d { display: flex; align-items: center; gap: 0.35rem; background: none; border: 1px solid var(--border); border-radius: 0.45rem; padding: 0.3rem 0.75rem; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.15s; margin: auto 0; }
-	.tab-3d:hover { border-color: var(--accent); color: var(--accent); }
-	.tab-3d-active { background: color-mix(in srgb, var(--accent) 10%, transparent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); color: var(--accent); }
-	.tab-3d-badge { background: var(--accent); color: #fff; font-size: 0.68rem; font-weight: 700; border-radius: 999px; padding: 0.05rem 0.4rem; min-width: 18px; text-align: center; }
-	.float-panel { position: fixed; z-index: 150; width: 420px; background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; box-shadow: 0 12px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; }
-	.float-hidden { display: none; }
-	.float-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem 0.6rem 1rem; border-bottom: 1px solid var(--border); cursor: grab; user-select: none; background: var(--surface); }
-	.float-header:active { cursor: grabbing; }
-	.float-title { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 700; color: var(--text); font-family: monospace; }
-	.float-sel { font-size: 0.72rem; font-weight: 600; color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 999px; padding: 0.1rem 0.45rem; white-space: nowrap; }
-	.float-clear { background: none; border: 1px solid var(--border); border-radius: 0.3rem; padding: 0.1rem 0.4rem; font-size: 0.7rem; color: var(--text-muted); cursor: pointer; white-space: nowrap; }
-	.float-clear:hover { border-color: var(--text-muted); color: var(--text); }
-	.float-close { margin-left: auto; background: none; border: none; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 0.3rem; line-height: 1; }
-	.float-close:hover { background: var(--border); color: var(--text); }
-	.float-body { flex: 1; }
+	.viewer-card { min-width: 0; }
+	.viewer-clear { background: none; border: 1px solid var(--border); border-radius: 0.3rem; padding: 0.1rem 0.4rem; font-size: 0.7rem; color: var(--text-muted); cursor: pointer; white-space: nowrap; }
+	.viewer-clear:hover { border-color: var(--text-muted); color: var(--text); }
 	.cb-col { width: 36px; text-align: center; padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
 	.cb-col input[type='checkbox'] { cursor: pointer; accent-color: var(--accent); width: 14px; height: 14px; }
 	.summary-row.is-sel { background: color-mix(in srgb, var(--accent) 5%, transparent); }
@@ -810,19 +730,19 @@
 	.expand-icon { color: var(--text-muted); font-size: 0.7rem; width: 12px; flex-shrink: 0; }
 	.res-cell { font-family: monospace; font-weight: 600; }
 	.ss-badge { display: inline-block; font-size: 0.72rem; font-weight: 600; border-radius: 0.25rem; padding: 0.1rem 0.4rem; white-space: nowrap; }
-	.ss-H { background: #ede9fe; color: #6d28d9; } .ss-G { background: #ddd6fe; color: #7c3aed; } .ss-I { background: #e0e7ff; color: #4338ca; }
-	.ss-E { background: #fef3c7; color: #92400e; } .ss-B { background: #fde68a; color: #78350f; }
-	.ss-T { background: #ccfbf1; color: #0f766e; } .ss-S { background: #cffafe; color: #0e7490; }
-	.ss-C { background: color-mix(in srgb, var(--border) 80%, transparent); color: var(--text-muted); }
-	:root[data-theme='dark'] .ss-H { background: #2e1065; color: #c4b5fd; } :root[data-theme='dark'] .ss-G { background: #3b0764; color: #d8b4fe; }
-	:root[data-theme='dark'] .ss-I { background: #1e1b4b; color: #a5b4fc; } :root[data-theme='dark'] .ss-E { background: #451a03; color: #fcd34d; }
-	:root[data-theme='dark'] .ss-B { background: #422006; color: #fbbf24; } :root[data-theme='dark'] .ss-T { background: #042f2e; color: #5eead4; }
-	:root[data-theme='dark'] .ss-S { background: #083344; color: #67e8f9; }
+	.ss-H { background: #fee2e2; color: #b91c1c; } .ss-G { background: #fecaca; color: #dc2626; } .ss-I { background: #fca5a5; color: #7f1d1d; }
+	.ss-E { background: #e0e7ff; color: #3730a3; } .ss-B { background: #cffafe; color: #155e75; }
+	.ss-T { background: #ffe4e6; color: #9f1239; } .ss-S { background: #bbf7d0; color: #14532d; }
+	.ss-C { background: #dcfce7; color: #166534; }
+	:root[data-theme='dark'] .ss-H { background: #7f1d1d; color: #fca5a5; } :root[data-theme='dark'] .ss-G { background: #991b1b; color: #fecaca; }
+	:root[data-theme='dark'] .ss-I { background: #450a0a; color: #fca5a5; } :root[data-theme='dark'] .ss-E { background: #312e81; color: #c7d2fe; }
+	:root[data-theme='dark'] .ss-B { background: #083344; color: #67e8f9; } :root[data-theme='dark'] .ss-T { background: #4c0519; color: #fda4af; }
+	:root[data-theme='dark'] .ss-S { background: #14532d; color: #86efac; } :root[data-theme='dark'] .ss-C { background: #166534; color: #bbf7d0; }
 	.dtm-pill { display: inline-block; font-family: monospace; font-size: 0.82rem; font-weight: 600; border-radius: 0.25rem; padding: 0.1rem 0.4rem; white-space: nowrap; }
-	.dtm-ss { background: #bbf7d0; color: #14532d; } .dtm-sl { background: #dcfce7; color: #166534; }
-	.dtm-dl { background: #ffedd5; color: #9a3412; } .dtm-ds { background: #fecaca; color: #7f1d1d; }
-	:root[data-theme='dark'] .dtm-ss { background: #14532d; color: #86efac; } :root[data-theme='dark'] .dtm-sl { background: #166534; color: #bbf7d0; }
-	:root[data-theme='dark'] .dtm-dl { background: #7c2d12; color: #fed7aa; } :root[data-theme='dark'] .dtm-ds { background: #7f1d1d; color: #fca5a5; }
+	.dtm-ss { background: #fecaca; color: #7f1d1d; } .dtm-sl { background: #ffedd5; color: #9a3412; }
+	.dtm-dl { background: #dcfce7; color: #166534; } .dtm-ds { background: #bbf7d0; color: #14532d; }
+	:root[data-theme='dark'] .dtm-ss { background: #7f1d1d; color: #fca5a5; } :root[data-theme='dark'] .dtm-sl { background: #7c2d12; color: #fed7aa; }
+	:root[data-theme='dark'] .dtm-dl { background: #166534; color: #bbf7d0; } :root[data-theme='dark'] .dtm-ds { background: #14532d; color: #86efac; }
 	.green-val { color: #16a34a; font-family: monospace; } .red-val { color: #dc2626; font-family: monospace; }
 	.sortable { cursor: pointer; user-select: none; } .sortable:hover { color: var(--text); }
 	.sort-active { color: var(--accent) !important; } .sort-arrow { opacity: 0.35; font-size: 0.7rem; } .sort-active .sort-arrow { opacity: 1; color: var(--accent); }
@@ -835,7 +755,7 @@
 	.bar-mutname { font-family: monospace; font-size: 0.75rem; font-weight: 600; color: var(--text); }
 	.bar-track { position: relative; height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; }
 	.bar-center-line { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--text-muted); opacity: 0.4; transform: translateX(-50%); }
-	.bar-fill { position: absolute; top: 0; bottom: 0; border-radius: 3px; } .bar-neg { background: #ef4444; } .bar-pos { background: #22c55e; }
+	.bar-fill { position: absolute; top: 0; bottom: 0; border-radius: 3px; } .bar-neg { background: #22c55e; } .bar-pos { background: #ef4444; }
 	.bar-value { font-family: monospace; font-size: 0.75rem; font-weight: 600; text-align: right; }
 	.charts-section { display: flex; flex-direction: column; gap: 0.75rem; }
 	.charts-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem; }

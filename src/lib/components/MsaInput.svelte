@@ -127,7 +127,7 @@
 			const size = parseInt(sizeOctal, 8);
 			offset += 512;
 			if (name.endsWith('.a3m') && size > 0)
-				files.set(name, dec.decode(bytes.subarray(offset, offset + size)));
+				files.set(name, dec.decode(bytes.subarray(offset, offset + size)).replace(/\0+$/, ''));
 			offset += Math.ceil(size / 512) * 512;
 		}
 		return files;

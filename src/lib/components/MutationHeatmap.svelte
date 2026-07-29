@@ -36,6 +36,18 @@
 		return [lerp(neutral[0], 35, s), lerp(neutral[1], 115, s), lerp(neutral[2], 210, s)];
 	}
 
+	/** Diverging red → neutral → green scale, centered at 0. Green = negative, red = positive. */
+	export function dtmColor(v: number, vmin: number, vmax: number, dark: boolean): [number, number, number] {
+		const absMax = Math.max(Math.abs(vmin), Math.abs(vmax), 0.01);
+		const t = Math.max(-1, Math.min(1, v / absMax));
+		const neutral: [number, number, number] = dark ? [38, 42, 58] : [240, 240, 245];
+		if (t >= 0) {
+			return [lerp(neutral[0], 215, t), lerp(neutral[1], 50, t), lerp(neutral[2], 50, t)];
+		}
+		const s = -t;
+		return [lerp(neutral[0], 34, s), lerp(neutral[1], 197, s), lerp(neutral[2], 94, s)];
+	}
+
 	/** Orange (buried) → teal (exposed) for RSA / accessibility. */
 	export function rsaColor(v: number, _vmin: number, _vmax: number, _dark: boolean): [number, number, number] {
 		const t = Math.max(0, Math.min(1, v / 100));
