@@ -28,7 +28,10 @@ jobs:
 
       - run: npm run build
         env:
-          BASE_PATH: /dezyme
+          # Pages serves a project site at /<repo-name>/, so the app's base path
+          # must match it exactly — a mismatch makes every asset 404 and the
+          # browser rejects the returned 404.html as a JS module.
+          BASE_PATH: /${{ github.event.repository.name }}
 
       - uses: actions/upload-pages-artifact@v3
         with:
