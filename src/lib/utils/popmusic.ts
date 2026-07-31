@@ -109,6 +109,107 @@ export function parseMutationsCSV(text: string): EvolMutationRow[] {
 	return rows;
 }
 
+/** One constituent single mutation of a multiple mutation. */
+export interface MultipleMutationSite {
+	mutation_pdb: string; // "MA1R"
+	mutation_msa: string; // "M1R"
+	chain: string;
+	resNumPdb: number;
+	msaPos: number;
+	wtAa: string;
+	mutAa: string;
+	RSA: number;
+	secondary_structure: string;
+	pLDDT: number;
+	gap_ratio: number;
+}
+
+export interface MultipleMutationRow {
+	mutation_pdb: string; // "MA1R:QA2A"
+	mutation_msa: string; // "M1R:Q2A"
+	sites: MultipleMutationSite[];
+	ddg: number;
+	ddgStr: number;
+	ddgStrEvol: number;
+}
+
+/**
+ * Parse `*_multiple_mutations.csv`.
+ *
+ * Per-site columns (identifiers and residue metadata) hold one ':'-joined value
+ * per constituent mutation; the DDG columns are aggregates for the whole
+ * combination and stay scalar.
+ */
+export function parseMultipleMutationsCSV(text: string): MultipleMutationRow[] {
+	const lines = text.split('\n');
+	if (lines.length < 2) return [];
+	const header = lines[0].split(',').map((h) => h.trim());
+	const idx = (name: string) => header.indexOf(name);
+
+	const cols = {
+		mutation_pdb: idx('mutation_pdb'),
+		mutation_msa: idx('mutation_msa'),
+		RSA:          idx('RSA'),
+		sec_struct:   idx('sec_struct'),
+		pLDDT:        idx('pLDDT'),
+		gap_ratio:    idx('gap_ratio'),
+		ddg:          idx('DDG_predicted'),
+		ddgStr:       idx('DDG_predicted_str'),
+		ddgStrEvol:   idx('DDG_predicted_str+evol')
+	};
+	if (cols.mutation_pdb < 0) return [];
+
+	const rows: MultipleMutationRow[] = [];
+	for (let i = 1; i < lines.length; i++) {
+		const line = lines[i].trim();
+		if (!line) continue;
+		const t = line.split(',');
+
+		const mutation_pdb = t[cols.mutation_pdb] ?? '';
+		const mutation_msa = t[cols.mutation_msa] ?? '';
+		if (!mutation_pdb) continue;
+
+		const part = (col: number) => (col >= 0 ? (t[col] ?? '').split(':') : []);
+		const pdbIds = mutation_pdb.split(':');
+		const msaIds = mutation_msa.split(':');
+		const rsa = part(cols.RSA);
+		const ss = part(cols.sec_struct);
+		const plddt = part(cols.pLDDT);
+		const gap = part(cols.gap_ratio);
+
+		const sites: MultipleMutationSite[] = [];
+		for (let s = 0; s < pdbIds.length; s++) {
+			const pdbMatch = pdbIds[s].match(/^([A-Z])([A-Z])(-?\d+)([A-Z])$/);
+			if (!pdbMatch) continue;
+			const msaMatch = (msaIds[s] ?? '').match(/^([A-Z])(-?\d+)([A-Z])$/);
+			sites.push({
+				mutation_pdb: pdbIds[s],
+				mutation_msa: msaIds[s] ?? '',
+				chain:     pdbMatch[2],
+				resNumPdb: parseInt(pdbMatch[3]),
+				msaPos:    msaMatch ? parseInt(msaMatch[2]) : parseInt(pdbMatch[3]),
+				wtAa:      pdbMatch[1],
+				mutAa:     pdbMatch[4],
+				RSA:                 parseFloat(rsa[s]) || 0,
+				secondary_structure: ss[s] ?? 'C',
+				pLDDT:               parseFloat(plddt[s]) || 0,
+				gap_ratio:           parseFloat(gap[s]) || 0
+			});
+		}
+		if (sites.length === 0) continue;
+
+		rows.push({
+			mutation_pdb,
+			mutation_msa,
+			sites,
+			ddg:        parseFloat(t[cols.ddg]) || 0,
+			ddgStr:     parseFloat(t[cols.ddgStr]) || 0,
+			ddgStrEvol: parseFloat(t[cols.ddgStrEvol]) || 0
+		});
+	}
+	return rows;
+}
+
 export function groupByPosition(rows: EvolMutationRow[]): PositionInfo[] {
 	const map = new Map<number, PositionInfo>();
 

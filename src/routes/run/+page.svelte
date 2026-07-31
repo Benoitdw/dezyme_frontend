@@ -12,6 +12,7 @@
 	import type { PdbMetadata as PdbMeta } from '$lib/utils/pdb';
 	import SoftIdCard from '$lib/components/SoftIdCard.svelte';
 	import MutationList from '$lib/components/MutationList.svelte';
+	import MultipleMutationsInput from '$lib/components/MultipleMutationsInput.svelte';
 	import MsaInput from '$lib/components/MsaInput.svelte';
 	import DiffuseSineHorizon from '$lib/components/DiffuseSineHorizon.svelte';
 
@@ -25,6 +26,8 @@
 	let fieldValues = $state<Record<string, string>>({});
 	let fieldErrors = $state<Record<string, string>>({});
 	let mutations = $state<string[] | null>(null);  // null = systematic
+	let multipleMutations = $state<string[] | null>(null);
+	let mutationMsaReference = $state(false);
 	let msaContent = $state<string | null>(null);
 	let msaFilename = $state<string | null>(null);
 	let biologicalAssembly = $state<number | null>(null);
@@ -109,7 +112,8 @@
 							.filter(([, v]) => v !== '')
 							.map(([k, v]) => [k, parseFloat(v)])
 					),
-					...(mutations !== null ? { mutations } : {})
+					...(mutations !== null ? { mutations } : {}),
+					...(multipleMutations !== null ? { multipleMutations, mutationMsaReference } : {})
 				}
 			});
 			addJob({ id, tool: selectedTool, structureId: pdbMeta.id, chains: selectedChains });
@@ -245,6 +249,16 @@
 				</section>
 			{/if}
 
+			{#if tool.multipleMutations && pdbMeta}
+				<section class="section">
+					<span class="section-label">Multiple mutations <span class="section-optional">optional</span></span>
+					<MultipleMutationsInput
+						chain={selectedChains[0]}
+						onchange={(m, msaRef) => { multipleMutations = m; mutationMsaReference = msaRef; }}
+					/>
+				</section>
+			{/if}
+
 			{#if tool.mutationList && pdbMeta}
 				<section class="section">
 					<span class="section-label">Mutations</span>
@@ -274,7 +288,7 @@
 
 <style>
 	.page {
-		max-width: 960px;
+		max-width: var(--page-max-form);
 		margin: 0 auto;
 		padding: 2.5rem 2rem;
 		position: relative;
@@ -404,6 +418,13 @@
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 		color: var(--text-muted);
+	}
+
+	.section-optional {
+		font-weight: 500;
+		text-transform: none;
+		letter-spacing: 0;
+		opacity: 0.65;
 	}
 
 	.fields {

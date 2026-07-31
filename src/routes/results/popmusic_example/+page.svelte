@@ -15,6 +15,7 @@
 <DiffuseSineHorizon />
 <PopmusicEvolResults
 	mutations={data.mutations}
+	multipleMutations={data.multipleMutations}
 	pdbUrl={data.pdbUrl}
 	fastaContent={data.fastaContent}
 	zipUrl={data.zipUrl}

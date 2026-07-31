@@ -658,7 +658,7 @@
 {/if}
 
 <style>
-	.page { max-width: 1100px; margin: 0 auto; padding: 2.5rem 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
+	.page { max-width: var(--page-max); margin: 0 auto; padding: 2.5rem 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
 	.tabs-spacer { flex: 1; }
 	.tab-3d { display: flex; align-items: center; gap: 0.35rem; background: none; border: 1px solid var(--border); border-radius: 0.45rem; padding: 0.3rem 0.75rem; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.15s; margin: auto 0; }
 	.tab-3d:hover { border-color: var(--accent); color: var(--accent); }

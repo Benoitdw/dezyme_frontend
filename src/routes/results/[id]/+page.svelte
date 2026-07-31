@@ -4,11 +4,11 @@
 	import { onMount } from 'svelte';
 	import { tools } from '$lib/tools';
 	import { getJobStatus, getJobPayload, getJobLogs, getJobResultUrls, getHotmusicResultUrls, fetchOutputFileText, getDownloadUrl } from '$lib/utils/api';
-	import { parseMutationsCSV } from '$lib/utils/popmusic';
+	import { parseMutationsCSV, parseMultipleMutationsCSV } from '$lib/utils/popmusic';
 	import { parseHotFile, parseHotsFile } from '$lib/utils/hotmusic';
 	import { parsePdbFile } from '$lib/utils/pdb';
 	import type { JobPayloadSummary, JobStatus } from '$lib/utils/api';
-	import type { EvolMutationRow } from '$lib/utils/popmusic';
+	import type { EvolMutationRow, MultipleMutationRow } from '$lib/utils/popmusic';
 	import type { HotSummaryRow, HotMutationRow } from '$lib/utils/hotmusic';
 	import type { PdbMetadata } from '$lib/utils/pdb';
 	import ProteinPending from '$lib/components/ProteinPending.svelte';
@@ -30,6 +30,7 @@
 
 	interface Results {
 		mutations: EvolMutationRow[];
+		multipleMutations: MultipleMutationRow[];
 		pdbUrl: string;
 		fastaContent: string | null;
 		zipUrl: string;
@@ -72,16 +73,21 @@
 			const urls = await getJobResultUrls(analysisId);
 			if (!urls || !urls.mutations_csv || !urls.pdb || !urls.metadata_json) return;
 
-			const [mutationsText, metadataText, fastaContent] = await Promise.all([
+			const [mutationsText, metadataText, fastaContent, multipleText] = await Promise.all([
 				fetchOutputFileText(urls.mutations_csv),
 				fetchOutputFileText(urls.metadata_json),
 				urls.fasta ? fetchOutputFileText(urls.fasta) : Promise.resolve(null),
+				// Only present when the run was given a multiple mutations file.
+				urls.multiple_mutations_csv
+					? fetchOutputFileText(urls.multiple_mutations_csv)
+					: Promise.resolve(null),
 			]);
 
 			const metadata = JSON.parse(metadataText);
 
 			results = {
 				mutations:    parseMutationsCSV(mutationsText),
+				multipleMutations: multipleText ? parseMultipleMutationsCSV(multipleText) : [],
 				pdbUrl:       urls.pdb,
 				fastaContent,
 				zipUrl:       getDownloadUrl(analysisId),
@@ -174,6 +180,7 @@
 {:else if status === 'done' && results && payload}
 	<PopmusicEvolResults
 		mutations={results.mutations}
+		multipleMutations={results.multipleMutations}
 		pdbUrl={results.pdbUrl}
 		fastaContent={results.fastaContent}
 		zipUrl={results.zipUrl}
@@ -182,6 +189,7 @@
 		sigSlope={results.sigSlope}
 		sigCenter={results.sigCenter}
 		clipThreshold={results.clipThreshold}
+		logContent={jobLog}
 		title={payload.structureId}
 		subtitle={analysisId}
 		backUrl="/run?tool=popmusic"
@@ -262,7 +270,7 @@
 {/if}
 
 <style>
-	.page { max-width: 900px; margin: 0 auto; padding: 2.5rem 2rem; display: flex; flex-direction: column; gap: 2rem; }
+	.page { max-width: var(--page-max-form); margin: 0 auto; padding: 2.5rem 2rem; display: flex; flex-direction: column; gap: 2rem; }
 	.header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
 	.title-row { display: flex; align-items: center; gap: 0.75rem; }
 	.tool-badge { font-size: 0.8rem; font-weight: 700; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 0.375rem; padding: 0.25rem 0.6rem; }

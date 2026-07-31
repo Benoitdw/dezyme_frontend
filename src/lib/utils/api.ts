@@ -33,6 +33,7 @@ export interface JobPayloadSummary {
 
 export interface PopMusicResultUrls {
 	mutations_csv: string | null;
+	multiple_mutations_csv: string | null;
 	pdb: string | null;
 	fasta: string | null;
 	metadata_json: string | null;
@@ -92,6 +93,7 @@ export async function getJobResultUrls(analysisId: string): Promise<PopMusicResu
 	const prefix = (path: string | null) => (path ? `${BASE}${path}` : null);
 	return {
 		mutations_csv:  prefix(data.mutations_csv),
+		multiple_mutations_csv: prefix(data.multiple_mutations_csv),
 		pdb:            prefix(data.pdb),
 		fasta:          prefix(data.fasta),
 		metadata_json:  prefix(data.metadata_json),

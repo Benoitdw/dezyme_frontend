@@ -56,7 +56,9 @@
 		border-radius: 0.875rem;
 		padding: 1.25rem;
 		overflow-x: auto;
-		max-height: 400px;
+		/* Grow with the window, but stay a scrollable panel rather than an
+		   endless page. Never shorter than the previous fixed 400px. */
+		max-height: max(400px, min(80vh, 1000px));
 		overflow-y: auto;
 	}
 	.log-pre {

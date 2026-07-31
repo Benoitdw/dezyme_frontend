@@ -26,6 +26,14 @@
 	--border: #e2e8f0;
 	--text: #1e293b;
 	--text-muted: #64748b;
+
+	/* Page widths. The lower bound of each clamp is the previous fixed width, so
+	   nothing narrows; the vw term lets wide screens breathe, and the upper bound
+	   stops lines and tables from becoming unscannable.
+	   Prose pages (help, license, home) keep their own narrow widths on purpose —
+	   line length drives readability there, not available space. */
+	--page-max: clamp(1100px, 92vw, 1680px);   /* data-dense: results, heatmaps, tables */
+	--page-max-form: clamp(960px, 82vw, 1280px); /* forms and status shells */
 }
 
 :root[data-theme="dark"] {

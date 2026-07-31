@@ -5,14 +5,16 @@
 	import MsaViewer from '$lib/components/MsaViewer.svelte';
 	import MutationHeatmap, { ddgColor as hmDdgColor, rsaColor as hmRsaColor } from '$lib/components/MutationHeatmap.svelte';
 	import type { HeatmapRowDef, ColorbarDef } from '$lib/components/MutationHeatmap.svelte';
-	import { groupByPosition, type EvolMutationRow, type PositionInfo } from '$lib/utils/popmusic';
+	import { groupByPosition, type EvolMutationRow, type PositionInfo, type MultipleMutationRow } from '$lib/utils/popmusic';
 	import type { Chart as ChartType } from 'chart.js';
 	import JobLogs from '$lib/components/JobLogs.svelte';
+	import MultipleMutationsTrack from '$lib/components/results/MultipleMutationsTrack.svelte';
 
 	let Chart = $state<typeof ChartType | null>(null);
 
 	interface Props {
 		mutations: EvolMutationRow[];
+		multipleMutations?: MultipleMutationRow[];
 		pdbUrl: string;
 		fastaContent: string | null;
 		zipUrl: string | null;
@@ -27,11 +29,11 @@
 		backUrl?: string;
 	}
 
-	let { mutations, pdbUrl, fastaContent, zipUrl, lambda, msaNtot, sigSlope, sigCenter, clipThreshold, logContent, title, subtitle, backUrl }: Props = $props();
+	let { mutations, multipleMutations = [], pdbUrl, fastaContent, zipUrl, lambda, msaNtot, sigSlope, sigCenter, clipThreshold, logContent, title, subtitle, backUrl }: Props = $props();
 
 	const ACCENT = '#6366f1';
 
-	type Tab = 'mutations' | 'summary' | 'parameters' | 'log';
+	type Tab = 'mutations' | 'multiple' | 'summary' | 'parameters' | 'log';
 	type ScoreKey = 'ddg' | 'ddgStr' | 'ddgStrEvol';
 
 	const SCORE_LABELS: Record<ScoreKey, string> = {
@@ -231,6 +233,45 @@
 		return 'ddg-ds';
 	}
 
+	// ── Multiple mutations ────────────────────────────────────────────────────
+	// The tool aggregates a multiple mutation as the plain sum of its individual
+	// effects, so each expanded row shows the single-mutation contributions.
+	const singleByPdbId = $derived(new Map(mutations.map((r) => [r.mutation_pdb, r])));
+
+	type MultiCol = 'mutation' | 'nSites' | 'ddg' | 'ddgStr' | 'ddgStrEvol';
+	let multiSort = $state<{ col: MultiCol; dir: 1 | -1 }>({ col: 'ddg', dir: -1 });
+	let expandedMultiKeys = $state<Set<string>>(new Set());
+
+	function toggleMultiSort(col: MultiCol) {
+		multiSort = multiSort.col === col
+			? { col, dir: (multiSort.dir * -1) as 1 | -1 }
+			: { col, dir: 1 };
+	}
+
+	function toggleMultiExpand(key: string) {
+		const next = new Set(expandedMultiKeys);
+		if (next.has(key)) { next.delete(key); } else { next.add(key); }
+		expandedMultiKeys = next;
+	}
+
+	const sortedMultiple = $derived.by(() => {
+		const dir = multiSort.dir;
+		return [...multipleMutations].sort((a, b) => {
+			switch (multiSort.col) {
+				case 'nSites':     return (a.sites.length - b.sites.length) * dir;
+				case 'ddg':        return (a.ddg - b.ddg) * dir;
+				case 'ddgStr':     return (a.ddgStr - b.ddgStr) * dir;
+				case 'ddgStrEvol': return (a.ddgStrEvol - b.ddgStrEvol) * dir;
+				case 'mutation':   return a.mutation_pdb.localeCompare(b.mutation_pdb) * dir;
+				default: return 0;
+			}
+		});
+	});
+
+	function signed(v: number, digits = 2): string {
+		return `${v > 0 ? '+' : ''}${v.toFixed(digits)}`;
+	}
+
 	// ── Chart ─────────────────────────────────────────────────────────────────
 	let canvasDist = $state<HTMLCanvasElement | undefined>();
 	let summaryScoreKey = $state<ScoreKey>('ddg');
@@ -354,6 +395,11 @@
 		<button class="tab" class:active={tab === 'mutations'} onclick={() => (tab = 'mutations')}>
 			All mutations <span class="tab-count">{mutations.length}</span>
 		</button>
+		{#if multipleMutations.length > 0}
+			<button class="tab" class:active={tab === 'multiple'} onclick={() => (tab = 'multiple')}>
+				Multiple mutations <span class="tab-count">{multipleMutations.length}</span>
+			</button>
+		{/if}
 		<button class="tab" class:active={tab === 'summary'} onclick={() => (tab = 'summary')}>
 			Summary
 		</button>
@@ -493,7 +539,101 @@
 		</div>
 	{/if}
 
-	<!-- Tab 2: Summary -->
+	<!-- Tab 2: Multiple mutations -->
+	{#if tab === 'multiple'}
+		<p class="multi-note">
+			Each multiple mutation combines several substitutions applied together. Its ΔΔG is the sum
+			of the individual effects — expand a row to see each contribution.
+		</p>
+		<MultipleMutationsTrack
+			{positions}
+			rows={sortedMultiple}
+			expandedKeys={expandedMultiKeys}
+			onToggle={toggleMultiExpand}
+		/>
+		<div class="table-wrap">
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th class="sortable" class:sort-active={multiSort.col === 'mutation'} onclick={() => toggleMultiSort('mutation')}>
+							Mutation <span class="sort-arrow">{multiSort.col === 'mutation' ? (multiSort.dir === 1 ? '↑' : '↓') : '↕'}</span>
+						</th>
+						<th class="num sortable" class:sort-active={multiSort.col === 'nSites'} onclick={() => toggleMultiSort('nSites')}>
+							Sites <span class="sort-arrow">{multiSort.col === 'nSites' ? (multiSort.dir === 1 ? '↑' : '↓') : '↕'}</span>
+						</th>
+						{#each (['ddg', 'ddgStr', 'ddgStrEvol'] as const) as key}
+							<th class="num sortable" class:sort-active={multiSort.col === key} onclick={() => toggleMultiSort(key)}>
+								{SCORE_LABELS[key]} <span class="sort-arrow">{multiSort.col === key ? (multiSort.dir === 1 ? '↑' : '↓') : '↕'}</span>
+							</th>
+						{/each}
+					</tr>
+				</thead>
+				<tbody>
+					{#each sortedMultiple as row}
+						{@const isExpanded = expandedMultiKeys.has(row.mutation_pdb)}
+						<tr class="pos-row" class:is-expanded={isExpanded} onclick={() => toggleMultiExpand(row.mutation_pdb)}>
+							<td>
+								<div class="pos-cell">
+									<span class="expand-chevron">{isExpanded ? '▾' : '▸'}</span>
+									<div class="multi-chips">
+										{#each row.sites as site}
+											<span class="multi-chip">
+												<span class="mut-from">{site.wtAa}</span><span
+													class="multi-chip-pos">{site.chain}{site.resNumPdb}</span><span
+													class="mut-to">{site.mutAa}</span>
+											</span>
+										{/each}
+									</div>
+								</div>
+							</td>
+							<td class="num">{row.sites.length}</td>
+							<td class="num"><span class="ddg-pill {ddgClass(row.ddg)}">{signed(row.ddg)}</span></td>
+							<td class="num mono">{row.ddgStr.toFixed(3)}</td>
+							<td class="num mono">{row.ddgStrEvol.toFixed(3)}</td>
+						</tr>
+						{#if isExpanded}
+							{#each row.sites as site}
+								{@const single = singleByPdbId.get(site.mutation_pdb)}
+								<tr class="mut-row">
+									<td>
+										<div class="multi-site">
+											<span class="mut-label">
+												<span class="mut-from">{site.wtAa}</span>
+												<span class="mut-arrow">→</span>
+												<span class="mut-to">{site.mutAa}</span>
+											</span>
+											<span class="multi-site-pos">{site.chain}{site.resNumPdb}</span>
+											<span class="ss-badge ss-{site.secondary_structure}">
+												{SS_LABELS[site.secondary_structure] ?? site.secondary_structure}
+											</span>
+											<span class="multi-site-meta">
+												RSA {site.RSA.toFixed(1)}% · pLDDT {site.pLDDT.toFixed(1)} · gap {(site.gap_ratio * 100).toFixed(0)}%
+											</span>
+										</div>
+									</td>
+									<td></td>
+									<td class="num">
+										{#if single}
+											<span class="ddg-pill {ddgClass(single.ddg)}">{signed(single.ddg)}</span>
+										{:else}
+											<span class="multi-na">—</span>
+										{/if}
+									</td>
+									<td class="num mono">{single ? single.ddgStr.toFixed(3) : '—'}</td>
+									<td class="num mono">{single ? single.ddgStrEvol.toFixed(3) : '—'}</td>
+								</tr>
+							{/each}
+						{/if}
+					{/each}
+					{#if sortedMultiple.length === 0}
+						<tr><td colspan="5" class="empty-cell">No multiple mutations for this analysis</td></tr>
+					{/if}
+				</tbody>
+			</table>
+		</div>
+	{/if}
+
+	<!-- Tab 3: Summary -->
 	{#if tab === 'summary'}
 		<div class="chart-card">
 			<div class="chart-card-header">
@@ -514,7 +654,7 @@
 		</div>
 	{/if}
 
-	<!-- Tab 3: Parameters -->
+	<!-- Tab 4: Parameters -->
 	{#if tab === 'parameters'}
 		<div class="params-section">
 			<div class="param-card">
@@ -593,7 +733,7 @@
 		</div>
 	{/if}
 
-	<!-- Tab 4: Log -->
+	<!-- Tab 5: Log -->
 	{#if tab === 'log' && logContent}
 		<JobLogs content={logContent} />
 	{/if}
@@ -628,7 +768,7 @@
 {/if}
 
 <style>
-	.page { max-width: 1100px; margin: 0 auto; padding: 2.5rem 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
+	.page { max-width: var(--page-max); margin: 0 auto; padding: 2.5rem 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
 
 	/* Header */
 	.header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
@@ -694,6 +834,16 @@
 	.mut-from { color: var(--text-muted); font-weight: 600; }
 	.mut-arrow { color: var(--text-muted); opacity: 0.5; font-size: 0.75rem; }
 	.mut-to { color: var(--text); font-weight: 700; }
+
+	/* Multiple mutations tab */
+	.multi-note { font-size: 0.8rem; color: var(--text-muted); line-height: 1.55; margin: 0 0 0.875rem; }
+	.multi-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+	.multi-chip { display: inline-flex; align-items: baseline; font-family: monospace; font-size: 0.82rem; background: color-mix(in srgb, var(--accent) 9%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent); border-radius: 0.25rem; padding: 0.08rem 0.4rem; }
+	.multi-chip-pos { color: var(--text-muted); font-size: 0.74rem; margin: 0 0.15rem; }
+	.multi-site { display: flex; align-items: center; flex-wrap: wrap; gap: 0.45rem; }
+	.multi-site-pos { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); }
+	.multi-site-meta { font-size: 0.72rem; color: var(--text-muted); opacity: 0.75; }
+	.multi-na { color: var(--text-muted); }
 	.mono { font-family: monospace; }
 	.empty-cell { text-align: center; color: var(--text-muted); font-size: 0.875rem; padding: 2.5rem !important; }
 
