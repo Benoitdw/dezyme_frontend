@@ -10,7 +10,7 @@
 
 	let { onLoaded, onError, onBiologicalAssembly }: Props = $props();
 
-	let inputValue = $state('3BIO');
+	let inputValue = $state('');
 	let detectedType = $derived(inputValue.trim().length >= 4 ? detectInputType(inputValue) : null);
 	let loading = $state(false);
 	let dragging = $state(false);
@@ -116,7 +116,7 @@
 		<div class="input-wrap">
 			<input
 				type="text"
-				placeholder="3BIO or P12345 or paste ID..."
+				placeholder="Input PDB ID (eg. '3BIO') or UniProt ID (eg. 'P69905')"
 				bind:value={inputValue}
 				onkeydown={handleKeydown}
 				class="text-input"
@@ -137,10 +137,24 @@
 		</button>
 	</div>
 
-	{#if loadedMeta?.biologicalAssemblyCount}
+	<div class="divider"><span>or</span></div>
+
+	<label
+		class="dropzone"
+		class:dragging
+		ondragover={(e) => { e.preventDefault(); dragging = true; }}
+		ondragleave={() => { dragging = false; }}
+		ondrop={handleDrop}
+	>
+		<input type="file" onchange={handleFileInput} class="file-input" />
+		<span class="drop-text">Drop your PDB file here</span>
+		<span class="browse-hint"><code>.pdb</code> or biological unit (<code>.pdb1</code>, <code>.pdb2</code>, …) &nbsp;·&nbsp; <u>browse</u></span>
+	</label>
+
+		{#if loadedMeta?.biologicalAssemblyCount}
 		<div class="bio-unit-row">
 			<div class="bio-unit-header">
-				<span class="bio-unit-label">Biological unit</span>
+				<span class="bio-unit-label">Please select a biological unit</span>
 				<span class="info-icon">ℹ<span class="tooltip">
 					X-ray structures are deposited as an <strong>asymmetric unit</strong>, which may contain
 					multiple copies or only part of the functional complex. <strong>Biological assemblies</strong>
@@ -167,20 +181,7 @@
 			</div>
 		</div>
 	{/if}
-
-	<div class="divider"><span>or</span></div>
-
-	<label
-		class="dropzone"
-		class:dragging
-		ondragover={(e) => { e.preventDefault(); dragging = true; }}
-		ondragleave={() => { dragging = false; }}
-		ondrop={handleDrop}
-	>
-		<input type="file" onchange={handleFileInput} class="file-input" />
-		<span class="drop-text">Drop your PDB file here</span>
-		<span class="browse-hint"><code>.pdb</code> or biological unit (<code>.pdb1</code>, <code>.pdb2</code>, …) &nbsp;·&nbsp; <u>browse</u></span>
-	</label>
+	
 </div>
 
 <style>

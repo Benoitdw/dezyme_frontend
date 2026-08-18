@@ -126,14 +126,28 @@ K15E
 		value={text}
 		oninput={onInput}
 	></textarea>
-
+	<p class="mm-hint">
+		One multiple mutation per line — single mutations joined by <code>:</code>, with one-letter
+		amino acids. Lines starting with <code>#</code> are ignored.
+		{#if msaReference}
+			Position indexing starts at 1. MSA numbering carries no chain, so each mutation is written
+			<code>&lt;WT&gt;&lt;position&gt;&lt;mutant&gt;</code> — e.g. <code>M1R:Q2A</code>.
+		{:else}
+			Each mutation is written
+			<code>&lt;WT&gt;&lt;chain&gt;&lt;position&gt;&lt;mutant&gt;</code> — e.g. <code>MA1R:QA2A</code>.
+		{/if}
+	</p>
+		<p class="mm-info">
+		ⓘ Mutations that cannot be resolved against the structure are skipped, not treated as errors —
+		the analysis still runs.
+	</p>
 	<div class="mm-actions">
 		<label class="action-btn file-label">
-			↑ Load
+			↑ Load File
 			<input type="file" accept=".txt,.csv,.tsv" onchange={loadFile} style="display:none" />
 		</label>
 		<button class="action-btn" onclick={saveFile} type="button" disabled={!text.trim()}>
-			↓ Save
+			↓ Save File
 		</button>
 		{#if mutations.length}
 			<span class="mm-count">
@@ -151,17 +165,7 @@ K15E
 		(<code>--mutation_msa_reference</code>). <strong>This changes the expected format.</strong>
 	</p>
 
-	<p class="mm-hint">
-		One multiple mutation per line — single mutations joined by <code>:</code>, with one-letter
-		amino acids. Lines starting with <code>#</code> are ignored.
-		{#if msaReference}
-			MSA numbering carries no chain, so each mutation is written
-			<code>&lt;WT&gt;&lt;position&gt;&lt;mutant&gt;</code> — e.g. <code>M1R:Q2A</code>.
-		{:else}
-			Each mutation is written
-			<code>&lt;WT&gt;&lt;chain&gt;&lt;position&gt;&lt;mutant&gt;</code> — e.g. <code>MA1R:QA2A</code>.
-		{/if}
-	</p>
+
 
 	{#if warnings.length}
 		<ul class="mm-warnings">
@@ -174,10 +178,7 @@ K15E
 		</ul>
 	{/if}
 
-	<p class="mm-info">
-		ⓘ Mutations that cannot be resolved against the structure are skipped, not treated as errors —
-		the analysis still runs.
-	</p>
+
 </div>
 
 <style>

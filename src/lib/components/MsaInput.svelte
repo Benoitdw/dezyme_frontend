@@ -218,11 +218,11 @@
 		{:else if chainSequence}
 			<div class="fetch-row">
 				<div class="fetch-info">
-					<span class="fetch-label">Compute MSA via MMSeqs2</span>
-					<span class="fetch-sub">ColabFold API · ~1–3 min</span>
+					<span class="fetch-label">Compute MSA via MMSeqs2 API</span>
+					<span class="fetch-sub">~1–3 min</span>
 				</div>
 				<button class="action-btn" onclick={fetchMMSeqs2} disabled={busy} type="button">
-					{busy ? status : 'Fetch'}
+					{busy ? status : 'Compute'}
 				</button>
 			</div>
 		{/if}
@@ -238,7 +238,7 @@
 		<FileDropzone
 			accept=".fasta,.a2m,.a3m,.fa"
 			label="Drop your MSA file here"
-			hint="browse (.fasta, .a3m)"
+			hint="browse (.fasta, .a3m, .a2m)"
 			onFile={handleFile}
 		/>
 	{/if}

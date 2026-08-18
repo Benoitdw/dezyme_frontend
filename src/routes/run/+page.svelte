@@ -163,7 +163,7 @@
 			</div>
 		{:else}
 			<section class="section">
-				<span class="section-label">Structure</span>
+				<span class="section-label">3D Structure</span>
 				<PdbInput onLoaded={onPdbLoaded} onError={onPdbError} onBiologicalAssembly={(i) => { biologicalAssembly = i; }} />
 				{#if pdbError}
 					<p class="error">{pdbError}</p>
@@ -251,7 +251,7 @@
 
 			{#if tool.multipleMutations && pdbMeta}
 				<section class="section">
-					<span class="section-label">Multiple mutations <span class="section-optional">optional</span></span>
+					<span class="section-label">Add Multiple mutations <span class="section-optional">optional</span></span>
 					<MultipleMutationsInput
 						chain={selectedChains[0]}
 						onchange={(m, msaRef) => { multipleMutations = m; mutationMsaReference = msaRef; }}
