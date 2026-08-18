@@ -40,7 +40,11 @@
 			const content = await res.text();
 			setLoaded(content, afFilename!);
 		} catch (e) {
-			setError(e);
+			// EBI has been serving 403 on those files: point at the fallback
+			const message = e instanceof Error ? e.message : 'Unknown error';
+			setError(chainSequence
+				? new Error(`${message} — AlphaFold MSA unavailable, compute it with MMSeqs2 below`)
+				: e);
 		}
 	}
 
@@ -215,7 +219,9 @@
 					{stage === 'fetching' ? status : 'Auto-fetch'}
 				</button>
 			</div>
-		{:else if chainSequence}
+		{/if}
+
+		{#if chainSequence}
 			<div class="fetch-row">
 				<div class="fetch-info">
 					<span class="fetch-label">Compute MSA via MMSeqs2 API</span>
