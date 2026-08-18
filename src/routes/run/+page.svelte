@@ -58,6 +58,21 @@
 
 	let tool = $derived(tools[selectedTool]);
 
+	// Chains the loaded unit actually contains: a biological unit may hold only a
+	// subset of the chains of the asymmetric unit
+	function presentChains(meta: PdbMeta): string[] {
+		if (meta.assemblyIndex === undefined || !meta.chainCopies) return meta.chains;
+		return meta.chains.filter((c) => (meta.chainCopies?.[c] ?? 0) > 0);
+	}
+
+	// Composition passed to the chain selector, undefined while on the asymmetric unit
+	let unitChainCopies = $derived(
+		pdbMeta && pdbMeta.assemblyIndex !== undefined ? pdbMeta.chainCopies : undefined
+	);
+	let unitLabel = $derived(
+		pdbMeta?.assemblyIndex !== undefined ? `assembly ${pdbMeta?.assemblyIndex}` : 'this unit'
+	);
+
 	$effect(() => {
 		document.body.setAttribute('data-tool', selectedTool);
 		return () => {
@@ -71,7 +86,7 @@
 		await new Promise<void>((r) => setTimeout(r, 280));
 		selectedTool = id;
 		if (pdbMeta) {
-			selectedChains = tools[id].chainRule.preselect(pdbMeta.chains);
+			selectedChains = tools[id].chainRule.preselect(presentChains(pdbMeta));
 		}
 		document.body.classList.remove('tool-transitioning');
 		transitioning = false;
@@ -80,10 +95,12 @@
 	function onPdbLoaded(meta: PdbMeta) {
 		pdbMeta = meta;
 		pdbError = null;
-		selectedChains = tool.chainRule.preselect(meta.chains);
+		selectedChains = tool.chainRule.preselect(presentChains(meta));
 		msaContent = null;
 		msaFilename = null;
-		biologicalAssembly = null;
+		// Keep the unit carried by the meta: onLoaded also fires when a biological
+		// unit is selected, and when a .pdb1 file is dropped
+		biologicalAssembly = meta.assemblyIndex ?? null;
 	}
 
 	function onPdbError(msg: string) {
@@ -185,6 +202,8 @@
 						onChange={(s) => (selectedChains = s)}
 						chainInfo={pdbMeta.chainInfo}
 						accent={tool.accent}
+						chainCopies={unitChainCopies}
+						{unitLabel}
 					/>
 				</section>
 			{/if}

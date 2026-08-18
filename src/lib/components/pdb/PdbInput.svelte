@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { detectInputType, fetchPdbMetadata, parsePdbFile } from '$lib/utils/pdb';
+	import { detectInputType, fetchPdbMetadata, parsePdbFile, parseChainCopies, formatStoichiometry } from '$lib/utils/pdb';
 	import type { PdbMetadata } from '$lib/utils/pdb';
 
 	interface Props {
@@ -86,7 +86,14 @@
 			const res = await fetch(url);
 			if (!res.ok) throw new Error(`Assembly ${index} not available`);
 			const content = await res.text();
-			const assemblyMeta: PdbMetadata = { ...baseMeta, pdbContent: content, pdbFilename: filename };
+			const assemblyMeta: PdbMetadata = {
+				...baseMeta,
+				pdbContent: content,
+				pdbFilename: filename,
+				assemblyIndex: index,
+				// The copies of a chain are stored as separate MODELs in the unit file
+				chainCopies: parseChainCopies(content, true)
+			};
 			loadedMeta = assemblyMeta;
 			onLoaded(assemblyMeta);
 		} catch (e) {
@@ -158,8 +165,9 @@
 				<span class="info-icon">ℹ<span class="tooltip">
 					X-ray structures are deposited as an <strong>asymmetric unit</strong>, which may contain
 					multiple copies or only part of the functional complex. <strong>Biological assemblies</strong>
-					are the author-defined functional form. Chain selection always reflects the asymmetric unit;
-					the chosen unit is what gets sent for score computation.
+					are the author-defined functional form. Chain selection shows the composition of the
+					chosen unit — chains it does not contain are greyed out, and a chain present in
+					several copies is tagged. The chosen unit is what gets sent for score computation.
 				</span></span>
 			</div>
 			<div class="bio-unit-options">
@@ -168,15 +176,26 @@
 					class:active={selectedAssembly === null}
 					onclick={() => selectAssembly(null)}
 					type="button"
-				>Asymmetric unit</button>
+				>
+					<span class="unit-name">Asymmetric unit</span>
+					{#if baseMeta?.chainCopies}
+						<span class="unit-formula">{formatStoichiometry(baseMeta.chainCopies)}</span>
+					{/if}
+				</button>
 				{#each Array.from({ length: loadedMeta.biologicalAssemblyCount }, (_, i) => i + 1) as i}
+					{@const composition = loadedMeta.assemblies?.[i]}
 					<button
 						class="unit-btn"
 						class:active={selectedAssembly === i}
 						onclick={() => selectAssembly(i)}
 						disabled={assemblyLoading}
 						type="button"
-					>{assemblyLoading && selectedAssembly === i ? '…' : `Assembly ${i}`}</button>
+					>
+						<span class="unit-name">{assemblyLoading && selectedAssembly === i ? '…' : `Assembly ${i}`}</span>
+						{#if composition}
+							<span class="unit-formula">{formatStoichiometry(composition)}</span>
+						{/if}
+					</button>
 				{/each}
 			</div>
 		</div>
@@ -390,6 +409,18 @@
 		cursor: pointer;
 		transition: border-color 0.15s, color 0.15s, background 0.15s;
 		white-space: nowrap;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.1rem;
+		line-height: 1.25;
+	}
+
+	.unit-formula {
+		font-family: monospace;
+		font-size: 0.7rem;
+		opacity: 0.75;
+		font-weight: 400;
 	}
 
 	.unit-btn:hover {

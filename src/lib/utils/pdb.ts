@@ -6,6 +6,9 @@ export interface ChainInfo {
 	sequence: string;  // full 1-letter sequence
 }
 
+// Chain id → number of copies of that chain in a structure or biological unit
+export type ChainCopies = Record<string, number>;
+
 export interface PdbMetadata {
 	id: string;
 	name: string;
@@ -22,6 +25,107 @@ export interface PdbMetadata {
 	pdbContent?: string;  // raw PDB file content for LittleProtein
 	msaUrl?: string;      // AlphaFold MSA download URL (versioned)
 	biologicalAssemblyCount?: number;
+	assemblies?: Record<number, ChainCopies>;  // biological unit index → composition (REMARK 350)
+	assemblyIndex?: number;                    // set when pdbContent holds a biological unit
+	chainCopies?: ChainCopies;                 // composition of what pdbContent actually holds
+}
+
+// Composition of every biological unit, read from the REMARK 350 records of the
+// asymmetric unit file: each BIOMOLECULE applies a set of BIOMT transformations
+// (one per generated copy) to a list of chains.
+export function parseBiologicalAssemblies(content: string): Record<number, ChainCopies> {
+	const assemblies: Record<number, ChainCopies> = {};
+	let unit: number | null = null;
+	let groupChains: string[] = [];
+	let transforms = 0;
+
+	const flushGroup = () => {
+		if (unit === null || groupChains.length === 0) return;
+		const composition = (assemblies[unit] ??= {});
+		for (const chain of groupChains) {
+			composition[chain] = (composition[chain] ?? 0) + Math.max(transforms, 1);
+		}
+	};
+
+	for (const line of content.split('\n')) {
+		if (!line.startsWith('REMARK 350')) continue;
+		const body = line.slice(10).trim();
+
+		const biomolecule = body.match(/^BIOMOLECULE:\s*(\d+)/);
+		if (biomolecule) {
+			flushGroup();
+			unit = parseInt(biomolecule[1], 10);
+			groupChains = [];
+			transforms = 0;
+			continue;
+		}
+		if (unit === null) continue;
+
+		// A unit may apply distinct transformation sets to distinct chain groups
+		const apply = body.match(/^APPLY THE FOLLOWING TO CHAINS:\s*(.+)$/);
+		if (apply) {
+			flushGroup();
+			groupChains = apply[1].split(/[,\s]+/).filter(Boolean);
+			transforms = 0;
+			continue;
+		}
+		// Continuation line of the chain list of the current group
+		const and = body.match(/^AND CHAINS:\s*(.+)$/);
+		if (and) {
+			groupChains = [...groupChains, ...and[1].split(/[,\s]+/).filter(Boolean)];
+			continue;
+		}
+		if (body.startsWith('BIOMT1')) transforms += 1;
+	}
+	flushGroup();
+	return assemblies;
+}
+
+// Chains actually present in a PDB file, with their number of copies. Biological
+// unit files store the symmetry copies as separate MODELs, hence countModels —
+// for the other multi-model files (NMR ensembles) every model is the same chain.
+export function parseChainCopies(content: string, countModels = false): ChainCopies {
+	const seen = new Set<string>();
+	let model = 0;
+	for (const line of content.split('\n')) {
+		if (line.startsWith('MODEL ')) { model += 1; continue; }
+		if (!line.startsWith('ATOM') && !line.startsWith('HETATM')) continue;
+		const chain = line[21]?.trim();
+		if (!chain) continue;
+		seen.add(countModels ? `${model}:${chain}` : chain);
+	}
+	const copies: ChainCopies = {};
+	for (const key of seen) {
+		const chain = countModels ? key.slice(key.indexOf(':') + 1) : key;
+		copies[chain] = (copies[chain] ?? 0) + 1;
+	}
+	return copies;
+}
+
+const SUBSCRIPT_DIGITS = '₀₁₂₃₄₅₆₇₈₉';
+
+// 'A₂B₂' — compact stoichiometry of a unit, or a plain count when too long to read
+export function formatStoichiometry(copies: ChainCopies): string {
+	const chains = Object.keys(copies).sort();
+	if (chains.length === 0) return '';
+	if (chains.length > 6) {
+		const total = chains.reduce((sum, c) => sum + copies[c], 0);
+		return `${chains.length} chains, ${total} copies`;
+	}
+	return chains
+		.map((chain) => {
+			const n = copies[chain];
+			if (n <= 1) return chain;
+			const sub = String(n).split('').map((d) => SUBSCRIPT_DIGITS[Number(d)]).join('');
+			return chain + sub;
+		})
+		.join('');
+}
+
+// Index of the biological unit an uploaded file holds, from its extension (.pdb1, .pdb2, …)
+function assemblyIndexFromFilename(filename?: string): number | undefined {
+	const m = filename?.match(/\.pdb(\d+)$/i);
+	return m ? parseInt(m[1], 10) : undefined;
 }
 
 // Standard 20 + ambiguous + full non-standard AA map from 3BioCompBio/StructureDCA
@@ -283,6 +387,8 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 		let residues: Record<string, string> | undefined;
 		let chainInfo: Record<string, ChainInfo> | undefined;
 		let pdbContent: string | undefined;
+		let assemblies: Record<number, ChainCopies> | undefined;
+		let chainCopies: ChainCopies | undefined;
 		try {
 			const pdbFile = await fetch(`https://files.rcsb.org/download/${id}.pdb`);
 			if (pdbFile.ok) {
@@ -290,6 +396,8 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 				const lines = pdbContent.split('\n');
 				residues = parseResidueMap(lines);
 				chainInfo = buildChainInfo(residues, chainNames, parseSeqres(lines));
+				assemblies = parseBiologicalAssemblies(pdbContent);
+				chainCopies = parseChainCopies(pdbContent);
 			}
 		} catch { /* non-blocking */ }
 
@@ -315,6 +423,8 @@ export async function fetchPdbMetadata(value: string, type: InputType): Promise<
 			chainInfo,
 			pdbContent,
 			biologicalAssemblyCount: assemblyIds.length || undefined,
+			assemblies,
+			chainCopies,
 		};
 	}
 
@@ -395,6 +505,7 @@ export function parsePdbFile(content: string, filename?: string): PdbMetadata {
 
 	const residues = parseResidueMap(lines);
 	const seqres   = parseSeqres(lines);
+	const assemblyIndex = assemblyIndexFromFilename(filename);
 
 	return {
 		id: 'custom',
@@ -407,5 +518,7 @@ export function parsePdbFile(content: string, filename?: string): PdbMetadata {
 		residues,
 		chainInfo: buildChainInfo(residues, {}, seqres),
 		pdbContent: content,
+		assemblyIndex,
+		chainCopies: parseChainCopies(content, assemblyIndex !== undefined),
 	};
 }

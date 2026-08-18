@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ChainRule } from '$lib/tools/types';
-	import type { ChainInfo } from '$lib/utils/pdb';
+	import type { ChainInfo, ChainCopies } from '$lib/utils/pdb';
+	import { formatStoichiometry } from '$lib/utils/pdb';
 
 	interface Props {
 		chains: string[];
@@ -9,13 +10,30 @@
 		onChange: (selected: string[]) => void;
 		chainInfo?: Record<string, ChainInfo>;
 		accent?: string;
+		chainCopies?: ChainCopies;  // composition of the displayed unit; undefined = whole asymmetric unit
+		unitLabel?: string;
 	}
 
-	let { chains, chainRule, selected = $bindable(), onChange, chainInfo = {}, accent = '#6366f1' }: Props = $props();
+	let {
+		chains,
+		chainRule,
+		selected = $bindable(),
+		onChange,
+		chainInfo = {},
+		accent = '#6366f1',
+		chainCopies,
+		unitLabel = 'this unit'
+	}: Props = $props();
 
 	let copied = $state<string | null>(null);
 
+	// Number of copies of a chain in the displayed unit, null when no unit is selected
+	function copiesOf(chain: string): number | null {
+		return chainCopies ? (chainCopies[chain] ?? 0) : null;
+	}
+
 	function toggle(chain: string) {
+		if (copiesOf(chain) === 0) return;  // chain absent from the selected unit
 		if (chainRule.multiple) {
 			const next = selected.includes(chain)
 				? selected.filter((c) => c !== chain)
@@ -43,20 +61,30 @@
 		{@const info = chainInfo[chain]}
 		{@const isSelected = selected.includes(chain)}
 		{@const seq = info?.sequence ?? ''}
+		{@const copies = copiesOf(chain)}
+		{@const absent = copies === 0}
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 		<div
 			class="chain-card"
 			class:active={isSelected}
+			class:absent
 			style="--accent: {accent}"
 			onclick={() => toggle(chain)}
 			onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(chain); } }}
 			role={chainRule.multiple ? 'checkbox' : 'radio'}
 			aria-checked={isSelected}
-			tabindex="0"
+			aria-disabled={absent}
+			tabindex={absent ? -1 : 0}
 		>
 			<div class="card-top">
 				<div class="card-top-left">
 					<span class="chain-letter">{chain}</span>
+					{#if copies !== null && copies > 1}
+						<span class="copy-badge" title="{copies} copies of chain {chain} in {unitLabel}">×{copies}</span>
+					{/if}
+					{#if absent}
+						<span class="absent-tag">not in {unitLabel}</span>
+					{/if}
 					{#if info?.length}
 						<span class="chain-length">{info.length} aa</span>
 					{/if}
@@ -65,7 +93,7 @@
 					{/if}
 				</div>
 				<div class="card-top-right">
-					{#if seq}
+					{#if !absent && seq}
 						<button
 							class="copy-btn"
 							onclick={(e) => copySeq(e, chain, seq)}
@@ -88,7 +116,17 @@
 	{/each}
 </div>
 
-<span class="hint">{chainRule.multiple ? 'Multiple chains allowed' : 'Single chain'}</span>
+<div class="hints">
+	<span class="hint">{chainRule.multiple ? 'Multiple chains allowed' : 'Single chain'}</span>
+	{#if chainCopies}
+		<span class="hint">
+			{unitLabel}: <strong>{formatStoichiometry(chainCopies)}</strong>
+			{#if Object.values(chainCopies).some((n) => n > 1)}
+				&nbsp;·&nbsp; a duplicated chain is selected once, the other copies are shown faded in the viewer
+			{/if}
+		</span>
+	{/if}
+</div>
 
 <style>
 	.chain-list {
@@ -126,6 +164,43 @@
 	.chain-card.active {
 		border-color: var(--accent);
 		background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+	}
+
+	.chain-card.absent {
+		opacity: 0.45;
+		cursor: not-allowed;
+		border-style: dashed;
+	}
+
+	.chain-card.absent:hover {
+		border-color: var(--border);
+	}
+
+	.copy-badge {
+		font-family: monospace;
+		font-size: 0.7rem;
+		font-weight: 700;
+		color: var(--accent);
+		background: color-mix(in srgb, var(--accent) 14%, transparent);
+		border-radius: 0.25rem;
+		padding: 0.05rem 0.3rem;
+		flex-shrink: 0;
+	}
+
+	.absent-tag {
+		font-size: 0.68rem;
+		color: var(--text-muted);
+		border: 1px solid var(--border);
+		border-radius: 0.25rem;
+		padding: 0.05rem 0.35rem;
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+
+	.hints {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
 	}
 
 	.card-top {

@@ -33,11 +33,15 @@
 		URL.revokeObjectURL(url);
 	}
 
-	const DIMMED_COLOR = [140, 140, 150];
+	const DIMMED_COLOR: [number, number, number] = [140, 140, 150];
 
 	function hexToRgb(hex: string): [number, number, number] {
 		const m = hex.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
 		return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [99, 102, 241];
+	}
+
+	function mix(color: number[], towards: number[], amount: number): number[] {
+		return color.map((v, i) => Math.round(v + (towards[i] - v) * amount));
 	}
 
 	onMount(() => {
@@ -46,7 +50,8 @@
 		function initViewer() {
 			const lp = (window as any).LittleProteinStarter;
 			viewer = lp.start(`#${viewerId}`, 180, 180, {
-				backgroundColor: getBgColor()
+				backgroundColor: getBgColor(),
+				showAllModels: meta.assemblyIndex !== undefined
 			});
 			viewer.fromString(meta.pdbContent, meta.id);
 		}
@@ -63,15 +68,27 @@
 
 	$effect(() => {
 		if (!viewer || !meta.pdbContent) return;
+		// Biological units store their chain copies as separate MODELs; every other
+		// multi-model file (NMR ensemble) is a single structure repeated
+		viewer.setShowAllModels(meta.assemblyIndex !== undefined);
 		viewer.fromString(meta.pdbContent, meta.id);
 	});
 
 	$effect(() => {
 		if (!viewer || meta.chains.length === 0) return;
 		const selectedColor = hexToRgb(accent);
+		const background = getBgColor();
+		const copies = meta.chainCopies ?? {};
 		const map: Record<string, number[]> = {};
 		for (const chain of meta.chains) {
-			map[chain] = selectedChains.includes(chain) ? selectedColor : DIMMED_COLOR;
+			const chainColor = selectedChains.includes(chain) ? selectedColor : DIMMED_COLOR;
+			const chainCopies = Math.max(copies[chain] ?? 1, 1);
+			for (let copy = 1; copy <= chainCopies; copy++) {
+				// Only the first copy carries the full color: the extra copies are the
+				// same chain, faded, to show they are not the one being analysed
+				const fade = copy === 1 ? 0 : Math.min(0.45 + 0.15 * (copy - 2), 0.75);
+				map[copy === 1 ? chain : `${chain}#${copy}`] = mix(chainColor, background, fade);
+			}
 		}
 		viewer.setColorsMap(map);
 	});
