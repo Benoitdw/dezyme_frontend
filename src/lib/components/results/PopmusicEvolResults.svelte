@@ -17,6 +17,7 @@
 		multipleMutations?: MultipleMutationRow[];
 		pdbUrl: string;
 		fastaContent: string | null;
+		fastaUrl?: string | null;  // alternative to fastaContent: fetched only when Parameters is opened
 		zipUrl: string | null;
 		lambda: number;
 		msaNtot?: number | null;
@@ -29,7 +30,26 @@
 		backUrl?: string;
 	}
 
-	let { mutations, multipleMutations = [], pdbUrl, fastaContent, zipUrl, lambda, msaNtot, sigSlope, sigCenter, clipThreshold, logContent, title, subtitle, backUrl }: Props = $props();
+	let { mutations, multipleMutations = [], pdbUrl, fastaContent, fastaUrl = null, zipUrl, lambda, msaNtot, sigSlope, sigCenter, clipThreshold, logContent, title, subtitle, backUrl }: Props = $props();
+
+	// An MSA weighs a few MB: when only its URL is given, fetch it the first time the
+	// Parameters tab is opened instead of making every visitor pay for it
+	let lazyFasta = $state<string | null>(null);
+	let msaLoading = $state(false);
+	let msaError = $state<string | null>(null);
+	let msaRequested = false;  // plain flag: guarding with $state would re-trigger the effect
+	const msaContent = $derived(fastaContent ?? lazyFasta);
+
+	$effect(() => {
+		if (tab !== 'parameters' || fastaContent || !fastaUrl || msaRequested) return;
+		msaRequested = true;
+		msaLoading = true;
+		fetch(fastaUrl)
+			.then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))))
+			.then((text) => { lazyFasta = text; })
+			.catch((e) => { msaError = e instanceof Error ? e.message : 'fetch failed'; })
+			.finally(() => { msaLoading = false; });
+	});
 
 	const ACCENT = '#6366f1';
 
@@ -791,8 +811,12 @@
 						</span>
 					{/if}
 				</div>
-				{#if fastaContent}
-					<MsaViewer msaContent={fastaContent} />
+				{#if msaContent}
+					<MsaViewer {msaContent} />
+				{:else if msaLoading}
+					<p class="param-empty">Loading alignment…</p>
+				{:else if msaError}
+					<p class="param-empty">Could not load the alignment: {msaError}</p>
 				{:else}
 					<p class="param-empty">No alignment file available for this run.</p>
 				{/if}

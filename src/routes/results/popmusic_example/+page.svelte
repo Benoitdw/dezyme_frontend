@@ -18,6 +18,7 @@
 	multipleMutations={data.multipleMutations}
 	pdbUrl={data.pdbUrl}
 	fastaContent={data.fastaContent}
+	fastaUrl={data.fastaUrl}
 	zipUrl={data.zipUrl}
 	lambda={data.lambda}
 	msaNtot={data.msaNtot}
