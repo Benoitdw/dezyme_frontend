@@ -8,6 +8,7 @@
 	import { groupByPosition, type EvolMutationRow, type PositionInfo, type MultipleMutationRow } from '$lib/utils/popmusic';
 	import type { Chart as ChartType } from 'chart.js';
 	import JobLogs from '$lib/components/JobLogs.svelte';
+	import { buildHistogram, formatBinRange, binDecimals } from '$lib/utils/histogram';
 	import MultipleMutationsTrack from '$lib/components/results/MultipleMutationsTrack.svelte';
 
 	let Chart = $state<typeof ChartType | null>(null);
@@ -298,6 +299,7 @@
 	// ── Chart ─────────────────────────────────────────────────────────────────
 	let canvasDist = $state<HTMLCanvasElement | undefined>();
 	let summaryScoreKey = $state<ScoreKey>('ddg');
+	let distBinWidth = $state(0.2);  // reported under the chart title
 
 	function chartColors() {
 		const isDark = $theme === 'dark';
@@ -309,21 +311,18 @@
 
 	function makeDistChart(canvas: HTMLCanvasElement, muts: EvolMutationRow[], key: ScoreKey, C = Chart!) {
 		const c = chartColors();
-		const BIN = 0.2, LO = -3, HI = 3;
-		const bins: number[] = Array(Math.round((HI - LO) / BIN)).fill(0);
-		for (const m of muts) {
-			const val = key === 'ddg' ? m.ddg : key === 'ddgStr' ? m.ddgStr : m.ddgStrEvol;
-			const i = Math.floor((Math.min(Math.max(val, LO), HI - 0.001) - LO) / BIN);
-			bins[i]++;
-		}
-		const labels = bins.map((_, i) => (LO + i * BIN).toFixed(1));
+		const values = muts.map(m => key === 'ddg' ? m.ddg : key === 'ddgStr' ? m.ddgStr : m.ddgStrEvol);
+		const hist = buildHistogram(values, 0.2);
+		const dec = binDecimals(hist.binWidth);
+		distBinWidth = hist.binWidth;
+		const labels = hist.edges.map(e => e.toFixed(dec));
 		return new C(canvas, {
 			type: 'bar',
 			data: {
 				labels,
 				datasets: [{
-					data: bins,
-					backgroundColor: labels.map(l => parseFloat(l) < 0 ? 'rgba(34,197,94,0.75)' : 'rgba(239,68,68,0.75)'),
+					data: hist.counts,
+					backgroundColor: hist.edges.map(e => e < 0 ? 'rgba(34,197,94,0.75)' : 'rgba(239,68,68,0.75)'),
 					borderWidth: 0, barPercentage: 1.0, categoryPercentage: 1.0
 				}]
 			},
@@ -332,7 +331,7 @@
 				plugins: {
 					legend: { display: false },
 					tooltip: { callbacks: {
-						title: ctx => `ΔΔG ≈ ${ctx[0].label} kcal/mol`,
+						title: ctx => `ΔΔG ∈ ${formatBinRange(hist, ctx[0].dataIndex, dec)} kcal/mol`,
 						label: ctx => ` ${ctx.raw} mutations`
 					}}
 				},
@@ -674,7 +673,10 @@
 			<div class="chart-card-header">
 				<div>
 					<div class="chart-title">ΔΔG distribution</div>
-					<div class="chart-sub">Distribution of all individual mutation effects — green = stabilizing, red = destabilizing</div>
+					<div class="chart-sub">
+						Distribution of all individual mutation effects — green = stabilizing, red = destabilizing
+						· bars are {distBinWidth} kcal/mol wide, hover one for its exact interval
+					</div>
 				</div>
 				<div class="score-selector">
 					{#each (['ddg', 'ddgStr', 'ddgStrEvol'] as ScoreKey[]) as key}

@@ -9,6 +9,7 @@
 	import type { Chart as ChartType } from 'chart.js';
 	import type { PdbMetadata as PdbMeta } from '$lib/utils/pdb';
 	import JobLogs from '$lib/components/JobLogs.svelte';
+	import { buildHistogram, formatBinRange, binDecimals } from '$lib/utils/histogram';
 
 	let Chart = $state<typeof ChartType | null>(null);
 
@@ -276,6 +277,7 @@
 	// ── Charts ───────────────────────────────────────────────────────────────
 	let canvasProfile = $state<HTMLCanvasElement | undefined>();
 	let canvasDist    = $state<HTMLCanvasElement | undefined>();
+	let distBinWidth  = $state(0.5);  // reported under the chart title
 
 	type ModalChart = 'profile' | 'dist';
 	let modalChart  = $state<ModalChart | null>(null);
@@ -375,19 +377,16 @@
 
 	function makeDistChart(canvas: HTMLCanvasElement, muts: HotMutationRow[], C = Chart!) {
 		const c = chartColors();
-		const BIN = 0.5, LO = -5, HI = 5;
-		const bins: number[] = Array(Math.round((HI - LO) / BIN)).fill(0);
-		for (const m of muts) {
-			const i = Math.floor((Math.min(Math.max(m.dtm, LO), HI - 0.001) - LO) / BIN);
-			bins[i]++;
-		}
-		const labels = bins.map((_, i) => (LO + i * BIN).toFixed(1));
+		const hist = buildHistogram(muts.map((m) => m.dtm), 0.5);
+		const dec = binDecimals(hist.binWidth);
+		distBinWidth = hist.binWidth;
+		const labels = hist.edges.map((e) => e.toFixed(dec));
 		return new C(canvas, {
 			type: 'bar',
-			data: { labels, datasets: [{ data: bins, backgroundColor: labels.map((l) => parseFloat(l) < 0 ? 'rgba(34,197,94,0.75)' : 'rgba(239,68,68,0.75)'), borderWidth: 0, barPercentage: 1.0, categoryPercentage: 1.0 }] },
+			data: { labels, datasets: [{ data: hist.counts, backgroundColor: hist.edges.map((e) => e < 0 ? 'rgba(34,197,94,0.75)' : 'rgba(239,68,68,0.75)'), borderWidth: 0, barPercentage: 1.0, categoryPercentage: 1.0 }] },
 			options: {
 				responsive: true, maintainAspectRatio: false, animation: false,
-				plugins: { legend: { display: false }, tooltip: { callbacks: { title: (ctx) => `ΔTm ≈ ${ctx[0].label} K`, label: (ctx) => ` ${ctx.raw} mutations` } } },
+				plugins: { legend: { display: false }, tooltip: { callbacks: { title: (ctx) => `ΔTm ∈ ${formatBinRange(hist, ctx[0].dataIndex, dec)} K`, label: (ctx) => ` ${ctx.raw} mutations` } } },
 				scales: {
 					x: { ticks: { color: c.text, maxTicksLimit: 12, font: { size: 11 } }, grid: { display: false }, title: { display: true, text: 'ΔTm (K)', color: c.text, font: { size: 11 } } },
 					y: { ticks: { color: c.text, font: { size: 11 } }, grid: { color: c.grid }, title: { display: true, text: 'Mutations', color: c.text, font: { size: 11 } } }
@@ -547,7 +546,10 @@
 						<div class="chart-title">ΔTm distribution</div>
 						<span class="chart-expand-hint">⤢ expand</span>
 					</div>
-					<div class="chart-sub">Distribution of all individual mutation effects — most mutations are destabilizing</div>
+					<div class="chart-sub">
+						Distribution of all individual mutation effects — most mutations are destabilizing
+						· bars are {distBinWidth} K wide, hover one for its exact interval
+					</div>
 					<div class="chart-wrap"><canvas bind:this={canvasDist}></canvas></div>
 				</div>
 			</div>
