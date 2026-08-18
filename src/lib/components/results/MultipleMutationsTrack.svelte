@@ -72,7 +72,7 @@
 		e.preventDefault();
 		const rect = axisEl.getBoundingClientRect();
 		const frac = rect.width ? (e.clientX - rect.left) / rect.width : 0.5;
-		zoomBy(e.deltaY > 0 ? 1.25 : 0.8, Math.max(0, Math.min(1, frac)));
+		zoomBy(e.deltaY > 0 ? 0.8 : 1.25, Math.max(0, Math.min(1, frac)));  // wheel down zooms in
 	}
 
 	const PAN_THRESHOLD = 3; // px before a press counts as a drag rather than a click

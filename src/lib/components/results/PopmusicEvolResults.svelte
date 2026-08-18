@@ -80,16 +80,57 @@
 	// Model whose mentions are highlighted in the Parameters tab (hover)
 	let hl = $state<'str' | 'evol' | null>(null);
 	let scoreKey = $state<ScoreKey>('ddg');
-	let selectedPosIdx = $state<number | null>(null);
+	let selectedPosIdxs = $state<Set<number>>(new Set());
 	let expandedPosKeys = $state<Set<number>>(new Set());
-	let showViewer = $state(false);
+	let showViewer = $state(true);   // the viewer is part of reading the results, not an extra
 	let everOpened = $state(false);
 	$effect(() => { if (showViewer) everOpened = true; });
 
-	// ── Floating viewer drag ─────────────────────────────────────────────────
+	// ── Floating viewer drag & resize ────────────────────────────────────────
+	const PANEL_MIN_W = 320, PANEL_MIN_H = 240;
+	const PANEL_DEFAULT_W = 420, PANEL_DEFAULT_H = 340;
+	const HEADER_H = 40;  // panel header, excluded from the viewer height
+
 	let floatX = $state(0);
 	let floatY = $state(0);
+	let panelW = $state(PANEL_DEFAULT_W);
+	let panelH = $state(PANEL_DEFAULT_H);
 	let dragOffX = 0, dragOffY = 0;
+
+	const isMaximized = $derived(panelW > PANEL_DEFAULT_W || panelH > PANEL_DEFAULT_H);
+
+	function clampToViewport() {
+		floatX = Math.max(0, Math.min(window.innerWidth - panelW, floatX));
+		floatY = Math.max(0, Math.min(window.innerHeight - panelH - HEADER_H, floatY));
+	}
+
+	function toggleMaximize() {
+		if (isMaximized) {
+			panelW = PANEL_DEFAULT_W;
+			panelH = PANEL_DEFAULT_H;
+		} else {
+			panelW = Math.max(PANEL_MIN_W, Math.round(window.innerWidth * 0.62));
+			panelH = Math.max(PANEL_MIN_H, Math.round(window.innerHeight * 0.72) - HEADER_H);
+			floatX = Math.round((window.innerWidth - panelW) / 2);
+			floatY = Math.max(16, Math.round((window.innerHeight - panelH - HEADER_H) / 2));
+		}
+		clampToViewport();
+	}
+
+	// Bottom-right grip: free resize
+	function startResize(e: PointerEvent) {
+		e.stopPropagation();
+		const startX = e.clientX, startY = e.clientY;
+		const startW = panelW, startH = panelH;
+		const onMove = (ev: PointerEvent) => {
+			panelW = Math.max(PANEL_MIN_W, Math.min(window.innerWidth - floatX, startW + ev.clientX - startX));
+			panelH = Math.max(PANEL_MIN_H, Math.min(window.innerHeight - floatY - HEADER_H, startH + ev.clientY - startY));
+		};
+		const onUp = () => window.removeEventListener('pointermove', onMove);
+		window.addEventListener('pointermove', onMove);
+		window.addEventListener('pointerup', onUp, { once: true });
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+	}
 	function startDrag(e: PointerEvent) {
 		if ((e.target as HTMLElement).closest('button')) return;
 		dragOffX = e.clientX - floatX;
@@ -99,14 +140,49 @@
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 	}
 	function onDrag(e: PointerEvent) {
-		floatX = Math.max(0, Math.min(window.innerWidth - 420, e.clientX - dragOffX));
-		floatY = Math.max(0, Math.min(window.innerHeight - 380, e.clientY - dragOffY));
+		floatX = Math.max(0, Math.min(window.innerWidth - panelW, e.clientX - dragOffX));
+		floatY = Math.max(0, Math.min(window.innerHeight - panelH - HEADER_H, e.clientY - dragOffY));
 	}
 	function stopDrag() { window.removeEventListener('pointermove', onDrag); }
 
 	// ── Grouped positions ────────────────────────────────────────────────────
 	const positions = $derived(groupByPosition(mutations));
-	const selectedPos = $derived(selectedPosIdx !== null ? positions[selectedPosIdx] : null);
+	const selectedPositions = $derived(
+		[...selectedPosIdxs].map(i => positions[i]).filter(Boolean).sort((a, b) => a.msaPos - b.msaPos)
+	);
+
+	function togglePosSelection(idx: number) {
+		if (idx < 0 || idx >= positions.length) return;
+		const next = new Set(selectedPosIdxs);
+		if (next.has(idx)) next.delete(idx); else next.add(idx);
+		selectedPosIdxs = next;
+		// Opened here rather than from an effect, so every path that selects shows it
+		if (next.size > 0) showViewer = true;
+	}
+
+	// The residue whose label is shown in 3D — driven by hover, from anywhere
+	let hoveredPosIdx = $state<number | null>(null);
+	const labelledResidue = $derived.by(() => {
+		const p = hoveredPosIdx !== null ? positions[hoveredPosIdx] : null;
+		return p ? { chain: p.chain, resNum: p.resNumPdb } : null;
+	});
+
+	function hoverResidueFrom3D(r: { chain: string; resNum: number } | null) {
+		if (!r) { hoveredPosIdx = null; return; }
+		const i = positions.findIndex(p => p.chain === r.chain && p.resNumPdb === r.resNum);
+		hoveredPosIdx = i >= 0 ? i : null;
+	}
+
+	// Clicking a multiple mutation shows all of its sites at once
+	function selectMultipleSites(row: MultipleMutationRow) {
+		const next = new Set<number>();
+		for (const site of row.sites) {
+			const i = positions.findIndex(p => p.chain === site.chain && p.resNumPdb === site.resNumPdb);
+			if (i >= 0) next.add(i);
+		}
+		selectedPosIdxs = next;
+		if (next.size > 0) showViewer = true;
+	}
 
 	// ── Heatmap ──────────────────────────────────────────────────────────────
 	const AA_ORDER = ['A','C','D','E','F','G','H','I','K','L','M','N','P','Q','R','S','T','V','W','Y'];
@@ -189,19 +265,30 @@
 	});
 
 	// ── 3D viewer ────────────────────────────────────────────────────────────
-	function ddgHex(v: number): string {
-		if (v < -0.5) return '#22c55e';
-		if (v < 0)    return '#86efac';
-		if (v < 0.5)  return '#fb923c';
-		return '#ef4444';
+	// The structure is painted with the very same colours as the heatmap's "Mean"
+	// row: same values, same range, same colorFn — so both read as one legend.
+	const meanRowValues = $derived(positions.map(p =>
+		scoreKey === 'ddg' ? p.meanDdg : scoreKey === 'ddgStr' ? p.meanDdgStr : p.meanDdgStrEvol
+	));
+
+	// MutationHeatmap derives a row's range from its own values when none is given
+	const meanRowRange = $derived.by(() => {
+		const vals = meanRowValues.filter((v): v is number => v !== null && Number.isFinite(v));
+		const mn = vals.length ? Math.min(...vals) : 0;
+		const mx = vals.length ? Math.max(...vals) : 1;
+		return { vmin: mn, vmax: mx === mn ? mn + 1 : mx };
+	});
+
+	function toHex(rgb: [number, number, number]): string {
+		return '#' + rgb.map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join('');
 	}
 
 	const viewerResidues = $derived(
 		positions.map((p, i) => ({
 			chain: p.chain,
 			resNum: p.resNumPdb,
-			color: ddgHex(p.meanDdg),
-			selected: i === selectedPosIdx
+			color: toHex(hmDdgColor(meanRowValues[i], meanRowRange.vmin, meanRowRange.vmax, $theme === 'dark')),
+			selected: selectedPosIdxs.has(i)
 		}))
 	);
 
@@ -234,7 +321,7 @@
 
 	function selectPositionFromTable(pos: PositionInfo) {
 		const idx = positions.findIndex(p => p.msaPos === pos.msaPos);
-		selectedPosIdx = selectedPosIdx === idx ? null : idx;
+		if (idx >= 0) togglePosSelection(idx);
 	}
 
 	function toggleExpand(pos: PositionInfo) {
@@ -269,6 +356,14 @@
 		const next = new Set(expandedMultiKeys);
 		if (next.has(key)) { next.delete(key); } else { next.add(key); }
 		expandedMultiKeys = next;
+	}
+
+	// Single entry point for both the track and the table: expand the row and show
+	// all of its sites on the structure
+	function activateMultiple(key: string) {
+		toggleMultiExpand(key);
+		const row = multipleMutations.find(r => r.mutation_pdb === key);
+		if (row) selectMultipleSites(row);
 	}
 
 	const sortedMultiple = $derived.by(() => {
@@ -375,8 +470,8 @@
 	const hasMsaDot = $derived(msaNtot != null && msaNtot > 0);
 
 	onMount(() => {
-		floatX = Math.max(16, window.innerWidth - 452);
-		floatY = Math.max(16, window.innerHeight - 420);
+		floatX = Math.max(16, window.innerWidth - panelW - 32);
+		floatY = Math.max(16, window.innerHeight - panelH - 80);
 		import('chart.js').then(({ Chart: C, registerables }) => {
 			C.register(...registerables);
 			Chart = C as unknown as typeof ChartType;
@@ -443,8 +538,12 @@
 			<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
 				<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
 			</svg>
-			3D
-			{#if selectedPosIdx !== null}<span class="tab-3d-badge">1</span>{/if}
+			3D structure
+			{#if selectedPositions.length === 1}
+				<span class="tab-3d-badge">{selectedPositions[0].chain}{selectedPositions[0].resNumPdb}</span>
+			{:else if selectedPositions.length > 1}
+				<span class="tab-3d-badge">{selectedPositions.length}</span>
+			{/if}
 		</button>
 	</div>
 
@@ -478,10 +577,9 @@
 				headerRows={hmHeaderRows}
 				dataRows={hmDataRows}
 				colorbar={hmColorbar}
-				selectedCol={selectedPosIdx}
-				oncolumnclick={(colIdx) => {
-					selectedPosIdx = selectedPosIdx === colIdx ? null : colIdx;
-				}}
+				selectedCols={selectedPosIdxs}
+				oncolumnclick={(colIdx) => togglePosSelection(colIdx)}
+				oncolumnhover={(colIdx) => (hoveredPosIdx = colIdx)}
 			/>
 		</div>
 
@@ -517,9 +615,11 @@
 				<tbody>
 					{#each sortedPositions as pos}
 						{@const posIdx = positions.findIndex(p => p.msaPos === pos.msaPos)}
-						{@const isSelected = posIdx === selectedPosIdx}
+						{@const isSelected = selectedPosIdxs.has(posIdx)}
 						{@const isExpanded = expandedPosKeys.has(pos.msaPos)}
 						<tr class="pos-row" class:is-sel={isSelected} class:is-expanded={isExpanded}
+							onmouseenter={() => (hoveredPosIdx = posIdx)}
+							onmouseleave={() => (hoveredPosIdx = null)}
 							onclick={() => toggleExpand(pos)}>
 							<td>
 								<div class="pos-cell">
@@ -577,7 +677,7 @@
 			{positions}
 			rows={sortedMultiple}
 			expandedKeys={expandedMultiKeys}
-			onToggle={toggleMultiExpand}
+			onToggle={activateMultiple}
 		/>
 		<div class="table-wrap">
 			<table class="data-table">
@@ -599,7 +699,8 @@
 				<tbody>
 					{#each sortedMultiple as row}
 						{@const isExpanded = expandedMultiKeys.has(row.mutation_pdb)}
-						<tr class="pos-row" class:is-expanded={isExpanded} onclick={() => toggleMultiExpand(row.mutation_pdb)}>
+						<tr class="pos-row" class:is-expanded={isExpanded}
+							onclick={() => activateMultiple(row.mutation_pdb)}>
 							<td>
 								<div class="pos-cell">
 									<span class="expand-chevron">{isExpanded ? '▾' : '▸'}</span>
@@ -845,7 +946,7 @@
 	<div
 		class="float-panel"
 		class:float-hidden={!showViewer}
-		style="left: {floatX}px; top: {floatY}px"
+		style="left: {floatX}px; top: {floatY}px; width: {panelW}px"
 		role="dialog"
 		aria-label="3D Structure viewer"
 	>
@@ -856,15 +957,37 @@
 				</svg>
 				Structure
 			</span>
-			{#if selectedPos !== null}
-				<span class="float-sel">{selectedPos.chain}{selectedPos.resNumPdb} ({selectedPos.wtAa})</span>
-				<button class="float-clear" onclick={() => (selectedPosIdx = null)}>Clear</button>
+			{#if selectedPositions.length > 0}
+				<span class="float-sel">
+					{#if selectedPositions.length === 1}
+						{selectedPositions[0].chain}{selectedPositions[0].resNumPdb} ({selectedPositions[0].wtAa})
+					{:else}
+						{selectedPositions.length} residues:
+						{selectedPositions.slice(0, 4).map(p => `${p.wtAa}${p.resNumPdb}`).join(' · ')}{selectedPositions.length > 4 ? ' …' : ''}
+					{/if}
+				</span>
+				<button class="float-clear" onclick={() => (selectedPosIdxs = new Set())}>Clear</button>
 			{/if}
+			<button
+				class="float-close"
+				onclick={toggleMaximize}
+				aria-label={isMaximized ? 'Shrink the viewer' : 'Enlarge the viewer'}
+				title={isMaximized ? 'Shrink' : 'Enlarge'}
+			>{isMaximized ? '⤡' : '⤢'}</button>
 			<button class="float-close" onclick={() => (showViewer = false)} aria-label="Close">✕</button>
 		</div>
 		<div class="float-body">
-			<ProteinViewer {pdbUrl} residues={viewerResidues} height="340px" />
+			<ProteinViewer
+				{pdbUrl}
+				residues={viewerResidues}
+				height="{panelH}px"
+				background={$theme === 'dark' ? '#1c1e26' : '#f8fafc'}
+				labelled={labelledResidue}
+				onresiduehover={hoverResidueFrom3D}
+			/>
 		</div>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="float-grip" onpointerdown={startResize} role="separator" aria-label="Resize the viewer"></div>
 	</div>
 {/if}
 
@@ -1015,10 +1138,13 @@
 	.param-empty { font-size: 0.82rem; color: var(--text-muted); margin: 0; }
 
 	/* Floating 3D viewer */
-	.float-panel { position: fixed; z-index: 150; width: 420px; background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; box-shadow: 0 12px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; }
+	.float-panel { position: fixed; z-index: 150; background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; box-shadow: 0 12px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; }
 	.float-hidden { display: none; }
 	.float-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem 0.6rem 1rem; border-bottom: 1px solid var(--border); cursor: grab; user-select: none; background: var(--surface); }
 	.float-header:active { cursor: grabbing; }
+	.float-grip { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none; }
+	.float-grip::after { content: ''; position: absolute; right: 4px; bottom: 4px; width: 8px; height: 8px; border-right: 2px solid var(--text-muted); border-bottom: 2px solid var(--text-muted); opacity: 0.6; }
+	.float-grip:hover::after { opacity: 1; border-color: var(--accent); }
 	.float-title { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 700; color: var(--text); }
 	.float-sel { font-size: 0.72rem; font-weight: 600; color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 999px; padding: 0.1rem 0.45rem; white-space: nowrap; font-family: monospace; }
 	.float-clear { background: none; border: 1px solid var(--border); border-radius: 0.3rem; padding: 0.1rem 0.4rem; font-size: 0.7rem; color: var(--text-muted); cursor: pointer; white-space: nowrap; }

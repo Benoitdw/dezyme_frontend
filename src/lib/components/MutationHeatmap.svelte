@@ -71,10 +71,20 @@
 		colorbar?: ColorbarDef;
 		gapIndices?: Set<number>;
 		selectedCol?: number | null;
+		selectedCols?: Set<number> | null;
 		oncolumnclick?: (colIdx: number) => void;
+		oncolumnhover?: (colIdx: number | null) => void;
 	}
 
-	let { positions, headerRows = [], dataRows, colorbar, gapIndices, selectedCol, oncolumnclick }: Props = $props();
+	let { positions, headerRows = [], dataRows, colorbar, gapIndices, selectedCol, selectedCols, oncolumnclick, oncolumnhover }: Props = $props();
+
+	// Only report a hovered column when it actually changes: consumers redraw on it
+	let hoveredCol: number | null = null;
+	function reportHover(colIdx: number | null) {
+		if (colIdx === hoveredCol) return;
+		hoveredCol = colIdx;
+		oncolumnhover?.(colIdx);
+	}
 
 	const HEADER_H = 26;
 	const DATA_H   = 20;
@@ -285,14 +295,18 @@
 		}
 
 		// Selected column highlight
-		if (selectedCol != null && selectedCol >= viewStart && selectedCol < viewEnd) {
-			const xF = PAD_LEFT + ((selectedCol - viewStart) / vW) * PW;
-			const xW = PW / vW;
-			const xi = Math.floor(xF);
-			const xw = Math.max(2, Math.round(xF + xW) - xi);
+		const highlighted = selectedCols ?? (selectedCol != null ? new Set([selectedCol]) : null);
+		if (highlighted?.size) {
 			ctx.strokeStyle = dark ? 'rgba(255,255,255,0.9)' : 'rgba(20,20,20,0.9)';
 			ctx.lineWidth = 2;
-			ctx.strokeRect(xi + 1, PAD_TOP + 1, Math.max(1, xw - 2), plotH - 2);
+			for (const col of highlighted) {
+				if (col < viewStart || col >= viewEnd) continue;
+				const xF = PAD_LEFT + ((col - viewStart) / vW) * PW;
+				const xW = PW / vW;
+				const xi = Math.floor(xF);
+				const xw = Math.max(2, Math.round(xF + xW) - xi);
+				ctx.strokeRect(xi + 1, PAD_TOP + 1, Math.max(1, xw - 2), plotH - 2);
+			}
 		}
 
 		// Plot border
@@ -371,7 +385,7 @@
 		const PW = canvas!.width - PAD_LEFT - padRight;
 		const frac = Math.max(0, Math.min(1, (cssX - PAD_LEFT) / PW));
 		const vW = viewEnd - viewStart;
-		const factor = e.deltaY > 0 ? 1.3 : 0.77;
+		const factor = e.deltaY > 0 ? 0.77 : 1.3;  // wheel down zooms in
 		const newW = Math.max(5, Math.min(positions.length, Math.round(vW * factor)));
 		const anchor = viewStart + frac * vW;
 		let newStart = Math.round(anchor - frac * newW);
@@ -408,11 +422,12 @@
 			}
 		}
 
-		if (cssX < PAD_LEFT || cssX > PAD_LEFT + PW) { hover = null; return; }
+		if (cssX < PAD_LEFT || cssX > PAD_LEFT + PW) { hover = null; reportHover(null); return; }
 		const posIdx = posAtCssX(cssX);
 		const rows   = buildRows();
 		const row    = rowAtCssY(cssY, rows);
-		if (!row || posIdx < 0 || posIdx >= positions.length) { hover = null; return; }
+		if (!row || posIdx < 0 || posIdx >= positions.length) { hover = null; reportHover(null); return; }
+		reportHover(posIdx);
 		const isGap  = gapIndices?.has(posIdx) ?? false;
 		const value  = (!isGap && posIdx < row.def.values.length) ? row.def.values[posIdx] : null;
 		hover = { cssX, cssY, posLabel: positions[posIdx], rowLabel: row.def.label, value, isGap };
@@ -424,12 +439,15 @@
 			const [cssX] = cssCoords(e);
 			const PW = canvas.width - PAD_LEFT - padRight;
 			if (cssX >= PAD_LEFT && cssX <= PAD_LEFT + PW) {
-				oncolumnclick(posAtCssX(cssX));
+				// A click on the very edge can map outside the data: onMouseMove guards
+				// against it, onMouseUp used not to
+				const posIdx = posAtCssX(cssX);
+				if (posIdx >= 0 && posIdx < positions.length) oncolumnclick(posIdx);
 			}
 		}
 		isDragging = false;
 	}
-	function onMouseLeave() { isDragging = false; hover = null; }
+	function onMouseLeave() { isDragging = false; hover = null; reportHover(null); }
 
 	function resetZoom() {
 		viewStart = 0;
