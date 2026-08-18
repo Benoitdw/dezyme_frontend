@@ -48,6 +48,8 @@
 	};
 
 	let tab = $state<Tab>('mutations');
+	// Model whose mentions are highlighted in the Parameters tab (hover)
+	let hl = $state<'str' | 'evol' | null>(null);
 	let scoreKey = $state<ScoreKey>('ddg');
 	let selectedPosIdx = $state<number | null>(null);
 	let expandedPosKeys = $state<Set<number>>(new Set());
@@ -657,79 +659,144 @@
 	<!-- Tab 4: Parameters -->
 	{#if tab === 'parameters'}
 		<div class="params-section">
-			<div class="param-card">
+			<div class="param-card" class:hl-str={hl === 'str'} class:hl-evol={hl === 'evol'}>
 				<div class="param-card-title">Model formula</div>
-				<div class="formula-box">
-					<div class="formula-text">
-						ΔΔG = (1 &minus; &lambda;) &middot; ΔΔG<sub>str</sub> + &lambda; &middot; ΔΔG<sub>str+evol</sub>
+
+				{#snippet ddgStr(label: string)}
+					<span class="tok tok-str" role="term" onmouseenter={() => (hl = 'str')} onmouseleave={() => (hl = null)}
+						>{label}ΔΔG<sub>str</sub>{label ? ')' : ''}</span>
+				{/snippet}
+				{#snippet ddgEvol(label: string)}
+					<span class="tok tok-evol" role="term" onmouseenter={() => (hl = 'evol')} onmouseleave={() => (hl = null)}
+						>{label}ΔΔG<sub>str+evol</sub>{label ? ')' : ''}</span>
+				{/snippet}
+
+				<!-- Explanation on the left, this run's numbers on the right -->
+				<div class="param-split">
+					<div class="param-explain">
+						<p class="param-lead">
+							The distinction between the two models allows the predictor to adapt to the amount of
+							evolutionary information available for each protein. Final model prediction (ΔΔG) is
+							obtained by interpolating between the structure-only model ({@render ddgStr('')}) and the
+							structure + evolution model ({@render ddgEvol('')}).
+						</p>
+
+						<ul class="param-notes">
+							<li>
+								{@render ddgStr('Structure-only model (')}: uses physical potential function scores and
+								the SaProt score, excluding the StructureDCA score.
+							</li>
+							<li>
+								{@render ddgEvol('Structure + evolution model (')}: uses physical potential function
+								scores, the SaProt score, and StructureDCA scores.
+							</li>
+							<li>
+								For proteins with low evolutionary information (few sequences in the MSA), the final
+								model relies mostly on {@render ddgStr('')}. For proteins with high evolutionary
+								information (many sequences in the MSA), it relies mostly on {@render ddgEvol('')}.
+							</li>
+							<li>
+								The amount of evolutionary information is quantified as log<sub>10</sub>(N<sub>tot</sub>),
+								where N<sub>tot</sub> is the total number of sequences in the MSA.
+							</li>
+						</ul>
 					</div>
-					<div class="sig-container">
-						<svg class="sig-svg" viewBox="0 0 390 205" xmlns="http://www.w3.org/2000/svg">
-						<g transform="translate(24, 0)">
-							<!-- grid -->
-							{#each [1, 2, 3, 4] as t}
-								<line x1={SC_L} y1={spy(t)} x2={SC_L + SC_PW} y2={spy(t)} stroke="var(--border)" stroke-width="0.5"/>
-							{/each}
-							<!-- crosshairs -->
+
+					<div class="formula-box param-visual">
+						<div class="formula-text">
+							ΔΔG = (1 &minus; &lambda;) &middot; {@render ddgStr('')} + &lambda; &middot; {@render ddgEvol('')}
+						</div>
+
+						<div class="sig-container">
+							<svg class="sig-svg" viewBox="0 0 390 205" xmlns="http://www.w3.org/2000/svg">
+							<defs>
+								<!-- The curve sweeps from one model to the other, like λ does -->
+								<linearGradient id="sigGrad" x1="0" y1="0" x2="1" y2="0">
+									<stop offset="0%"   stop-color="var(--c-str)"/>
+									<stop offset="100%" stop-color="var(--c-evol)"/>
+								</linearGradient>
+							</defs>
+							<g transform="translate(24, 0)">
+								<!-- half of the plot the hovered model dominates -->
+								{#if hl}
+									<rect x={hl === 'str' ? SC_L : SC_L + SC_PW / 2} y={SC_T}
+										  width={SC_PW / 2} height={SC_BOT - SC_T}
+										  fill={hl === 'str' ? 'var(--c-str)' : 'var(--c-evol)'} opacity="0.09"/>
+								{/if}
+								<!-- grid -->
+								{#each [1, 2, 3, 4] as t}
+									<line x1={SC_L} y1={spy(t)} x2={SC_L + SC_PW} y2={spy(t)} stroke="var(--border)" stroke-width="0.5"/>
+								{/each}
+								<!-- crosshairs -->
+								{#if hasMsaDot}
+									<line x1={SC_L} y1={spy(dotLog10)} x2={spx(dotLam)} y2={spy(dotLog10)}
+										  stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4,3" opacity="0.55"/>
+									<line x1={spx(dotLam)} y1={spy(dotLog10)} x2={spx(dotLam)} y2={SC_BOT}
+										  stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4,3" opacity="0.55"/>
+								{/if}
+								<!-- sigmoid curve -->
+								<path d={sigCurve} fill="none" stroke="url(#sigGrad)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+								<!-- dots -->
+								{#if hasMsaDot}
+									<circle cx={SC_L}         cy={spy(dotLog10)} r="3.5" fill="var(--text-muted)" opacity="0.6"/>
+									<circle cx={spx(dotLam)}  cy={SC_BOT}        r="3.5" fill="var(--text-muted)" opacity="0.6"/>
+									<circle cx={spx(dotLam)}  cy={spy(dotLog10)} r="4.5" fill="var(--accent)"/>
+								{/if}
+								<!-- axes -->
+								<line x1={SC_L} y1={SC_T}   x2={SC_L}         y2={SC_BOT} stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="square"/>
+								<line x1={SC_L} y1={SC_BOT} x2={SC_L + SC_PW} y2={SC_BOT} stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="square"/>
+								<!-- Y ticks + labels -->
+								{#each [0, 1, 2, 3, 4] as t}
+									<line x1={SC_L - 4} y1={spy(t)} x2={SC_L} y2={spy(t)} stroke="var(--text-muted)" stroke-width="1.5"/>
+									<text x={SC_L - 7} y={spy(t)} text-anchor="end" dominant-baseline="middle" font-size="9.5" fill="var(--text-muted)">{t}</text>
+								{/each}
+								<!-- Y axis label -->
+								<text x={10} y={SC_MID_Y} text-anchor="middle" dominant-baseline="middle"
+									  font-size="10" fill="var(--text-muted)" transform="rotate(-90, 10, {SC_MID_Y})">log₁₀(Nₜₒₜ)</text>
+								<!-- X ticks + labels -->
+								{#each [0, 0.25, 0.5, 0.75, 1] as t}
+									<line x1={spx(t)} y1={SC_BOT} x2={spx(t)} y2={SC_BOT + 4} stroke="var(--text-muted)" stroke-width="1.5"/>
+									<text x={spx(t)} y={SC_BOT + 15} text-anchor="middle" font-size="9.5" fill="var(--text-muted)">{t}</text>
+								{/each}
+								<!-- X axis label (λ) -->
+								<text x={171} y={SC_BOT + 30} text-anchor="middle" font-size="12" fill="var(--text-muted)" font-style="italic">λ</text>
+								<!-- ΔΔG endpoint labels: same colors as in the text -->
+								<text class="end-str"  x={SC_L}         y={SC_BOT + 47} text-anchor="middle" font-size="9.5">ΔΔG<tspan dy="2" font-size="7.5">str</tspan></text>
+								<text class="end-evol" x={SC_L + SC_PW} y={SC_BOT + 47} text-anchor="middle" font-size="9.5">ΔΔG<tspan dy="2" font-size="7.5">str+evol</tspan></text>
+								<!-- corner labels: the two ends of the evolutionary information axis -->
+								<text class="end-str"  x={SC_L + 6} y={SC_BOT - 6} font-size="8.5" opacity="0.75">No MSA</text>
+								<text class="end-evol" x={SC_L + 6} y={SC_T + 14}  font-size="8.5" opacity="0.75">Deep MSA</text>
+							</g>
+							</svg>
 							{#if hasMsaDot}
-								<line x1={SC_L} y1={spy(dotLog10)} x2={spx(dotLam)} y2={spy(dotLog10)}
-									  stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4,3" opacity="0.55"/>
-								<line x1={spx(dotLam)} y1={spy(dotLog10)} x2={spx(dotLam)} y2={SC_BOT}
-									  stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4,3" opacity="0.55"/>
+								<div class="sig-vals">
+									<span>N<sub>tot</sub> = <code>{msaNtot?.toLocaleString()}</code></span>
+									<span class="sig-sep">·</span>
+									<span>log₁₀(N<sub>tot</sub>) = <code>{dotLog10.toFixed(3)}</code></span>
+									<span class="sig-sep">·</span>
+									<span>λ = <code>{dotLamClipped.toFixed(3)}</code></span>
+								</div>
 							{/if}
-							<!-- sigmoid curve -->
-							<path d={sigCurve} fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-							<!-- dots -->
-							{#if hasMsaDot}
-								<circle cx={SC_L}         cy={spy(dotLog10)} r="3.5" fill="var(--text-muted)" opacity="0.6"/>
-								<circle cx={spx(dotLam)}  cy={SC_BOT}        r="3.5" fill="var(--text-muted)" opacity="0.6"/>
-								<circle cx={spx(dotLam)}  cy={spy(dotLog10)} r="4.5" fill="var(--accent)"/>
-							{/if}
-							<!-- axes -->
-							<line x1={SC_L} y1={SC_T}   x2={SC_L}         y2={SC_BOT} stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="square"/>
-							<line x1={SC_L} y1={SC_BOT} x2={SC_L + SC_PW} y2={SC_BOT} stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="square"/>
-							<!-- Y ticks + labels -->
-							{#each [0, 1, 2, 3, 4] as t}
-								<line x1={SC_L - 4} y1={spy(t)} x2={SC_L} y2={spy(t)} stroke="var(--text-muted)" stroke-width="1.5"/>
-								<text x={SC_L - 7} y={spy(t)} text-anchor="end" dominant-baseline="middle" font-size="9.5" fill="var(--text-muted)">{t}</text>
-							{/each}
-							<!-- Y axis label -->
-							<text x={10} y={SC_MID_Y} text-anchor="middle" dominant-baseline="middle"
-								  font-size="10" fill="var(--text-muted)" transform="rotate(-90, 10, {SC_MID_Y})">log₁₀(Nₜₒₜ)</text>
-							<!-- X ticks + labels -->
-							{#each [0, 0.25, 0.5, 0.75, 1] as t}
-								<line x1={spx(t)} y1={SC_BOT} x2={spx(t)} y2={SC_BOT + 4} stroke="var(--text-muted)" stroke-width="1.5"/>
-								<text x={spx(t)} y={SC_BOT + 15} text-anchor="middle" font-size="9.5" fill="var(--text-muted)">{t}</text>
-							{/each}
-							<!-- X axis label (λ) -->
-							<text x={171} y={SC_BOT + 30} text-anchor="middle" font-size="12" fill="var(--text-muted)" font-style="italic">λ</text>
-							<!-- ΔΔG endpoint labels -->
-							<text x={SC_L}         y={SC_BOT + 47} text-anchor="middle" font-size="9.5" fill="var(--text-muted)">ΔΔG<tspan dy="2" font-size="7.5">str</tspan></text>
-							<text x={SC_L + SC_PW} y={SC_BOT + 47} text-anchor="middle" font-size="9.5" fill="var(--text-muted)">ΔΔG<tspan dy="2" font-size="7.5">str+evol</tspan></text>
-							<!-- corner labels -->
-							<text x={SC_L + 6} y={SC_BOT - 6}  font-size="8.5" fill="var(--text-muted)" opacity="0.6">No MSA</text>
-							<text x={SC_L + 6} y={SC_T + 14}   font-size="8.5" fill="var(--text-muted)" opacity="0.6">Deep MSA</text>
-						</g>
-						</svg>
-						{#if hasMsaDot}
-							<div class="sig-vals">
-								<span>N<sub>tot</sub> = <code>{msaNtot?.toLocaleString()}</code></span>
-								<span class="sig-sep">·</span>
-								<span>log₁₀(N<sub>tot</sub>) = <code>{dotLog10.toFixed(3)}</code></span>
-								<span class="sig-sep">·</span>
-								<span>λ = <code>{dotLamClipped.toFixed(3)}</code></span>
-							</div>
-						{/if}
+						</div>
 					</div>
 				</div>
 			</div>
 
-			{#if fastaContent}
-				<div class="param-card">
+			<div class="param-card">
+				<div class="param-card-head">
 					<div class="param-card-title">Multiple sequence alignment</div>
-					<MsaViewer msaContent={fastaContent} />
+					{#if hasMsaDot}
+						<span class="param-card-note">
+							N<sub>tot</sub> = {msaNtot?.toLocaleString()} sequences — the count λ is derived from
+						</span>
+					{/if}
 				</div>
-			{/if}
+				{#if fastaContent}
+					<MsaViewer msaContent={fastaContent} />
+				{:else}
+					<p class="param-empty">No alignment file available for this run.</p>
+				{/if}
+			</div>
 		</div>
 	{/if}
 
@@ -885,6 +952,29 @@
 	.sig-vals { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--text-muted); justify-content: center; }
 	.sig-vals code { font-family: monospace; font-size: 0.8rem; color: var(--text); }
 	.sig-sep { opacity: 0.4; }
+	:global(:root[data-theme='dark']) .params-section { --c-str: #fbbf24; --c-evol: #a5b4fc; }
+	.param-lead { font-size: 0.88rem; line-height: 1.65; color: var(--text-muted); margin: 0; }
+	.param-split { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 3fr); gap: 1.5rem 2.5rem; align-items: center; }
+	.param-explain { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+	.param-visual { min-width: 0; }
+	@media (max-width: 980px) { .param-split { grid-template-columns: 1fr; align-items: start; } }
+	.param-lead sub, .param-notes sub, .param-card-note sub, .tok sub { font-size: 0.7em; }
+	.param-notes { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.84rem; line-height: 1.65; color: var(--text-muted); }
+
+	/* Colour code tying every mention of a model to its end of the λ axis */
+	.params-section { --c-str: #b45309; --c-evol: #4f46e5; }
+	.tok { color: var(--c-str); font-weight: 600; border-radius: 0.25rem; padding: 0.05rem 0.2rem; margin: 0 -0.2rem; cursor: help; transition: background 0.15s, opacity 0.15s; }
+	.tok-evol { color: var(--c-evol); }
+	.hl-str .tok-str  { background: color-mix(in srgb, var(--c-str) 18%, transparent); }
+	.hl-evol .tok-evol { background: color-mix(in srgb, var(--c-evol) 18%, transparent); }
+	.hl-str .tok-evol, .hl-evol .tok-str { opacity: 0.3; }
+	.end-str  { fill: var(--c-str); }
+	.end-evol { fill: var(--c-evol); }
+	.hl-str .end-evol, .hl-evol .end-str { opacity: 0.25; }
+	.formula-text .tok { font-weight: inherit; white-space: nowrap; }
+	.param-card-head { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+	.param-card-note { font-size: 0.75rem; color: var(--text-muted); opacity: 0.8; }
+	.param-empty { font-size: 0.82rem; color: var(--text-muted); margin: 0; }
 
 	/* Floating 3D viewer */
 	.float-panel { position: fixed; z-index: 150; width: 420px; background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; box-shadow: 0 12px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; }

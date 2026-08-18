@@ -259,7 +259,7 @@
 					{#key pdbMeta.id}
 						<MsaInput
 							msaUrl={pdbMeta.msaUrl}
-							chainSequence={pdbMeta.msaUrl ? undefined : pdbMeta.chainInfo?.[selectedChains[0]]?.sequence}
+							chainSequence={pdbMeta.chainInfo?.[selectedChains[0]]?.sequence}
 							queryName="{pdbMeta.id}_{selectedChains[0] ?? 'A'}"
 							onLoaded={(content, filename) => { msaContent = content; msaFilename = filename; }}
 							onClear={() => { msaContent = null; msaFilename = null; }}
