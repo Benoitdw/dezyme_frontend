@@ -19,6 +19,7 @@
 	pdbUrl={data.pdbUrl}
 	fastaContent={data.fastaContent}
 	fastaUrl={data.fastaUrl}
+	downloads={data.downloads}
 	zipUrl={data.zipUrl}
 	lambda={data.lambda}
 	msaNtot={data.msaNtot}

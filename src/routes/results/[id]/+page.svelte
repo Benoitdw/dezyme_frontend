@@ -34,6 +34,7 @@
 		pdbUrl: string;
 		fastaContent: string | null;
 		zipUrl: string;
+		downloads: { label: string; url: string; filename?: string }[];
 		lambda: number;
 		msaNtot: number | null;
 		sigSlope: number | null;
@@ -85,12 +86,25 @@
 
 			const metadata = JSON.parse(metadataText);
 
+			// One button per output file, skipping the ones this run did not produce
+			const basename = (u: string) => u.split('/').pop();
+			const downloads = ([
+				['Mutations CSV',          urls.mutations_csv],
+				['Multiple mutations CSV', urls.multiple_mutations_csv],
+				['Metadata JSON',          urls.metadata_json],
+				['MSA',                    urls.fasta],
+				['Structure PDB',          urls.pdb],
+			] as const)
+				.filter(([, url]) => !!url)
+				.map(([label, url]) => ({ label, url: url as string, filename: basename(url as string) }));
+
 			results = {
 				mutations:    parseMutationsCSV(mutationsText),
 				multipleMutations: multipleText ? parseMultipleMutationsCSV(multipleText) : [],
 				pdbUrl:       urls.pdb,
 				fastaContent,
 				zipUrl:       getDownloadUrl(analysisId),
+				downloads,
 				lambda:        metadata.struct_vs_evol_models_lambda ?? 1,
 				msaNtot:       metadata.msa_Ntot ?? null,
 				sigSlope:      metadata.struct_vs_evol_models_sigmoid_slope  ?? null,
@@ -184,6 +198,7 @@
 		pdbUrl={results.pdbUrl}
 		fastaContent={results.fastaContent}
 		zipUrl={results.zipUrl}
+		downloads={results.downloads}
 		lambda={results.lambda}
 		msaNtot={results.msaNtot}
 		sigSlope={results.sigSlope}

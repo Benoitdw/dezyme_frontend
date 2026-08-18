@@ -20,6 +20,13 @@ export async function load({ fetch }) {
 		fastaContent: null,
 		// Only fetched if the visitor opens the Parameters tab
 		fastaUrl: `${prefix}/input_A.a3m`,
+		downloads: [
+			{ label: 'Mutations CSV',          url: `${prefix}/input_A_mutations.csv` },
+			...(multiCsvText ? [{ label: 'Multiple mutations CSV', url: `${prefix}/input_A_multiple_mutations.csv` }] : []),
+			{ label: 'Metadata JSON',          url: `${prefix}/input_A_metadata.json` },
+			{ label: 'MSA',                    url: `${prefix}/input_A.a3m` },
+			{ label: 'Structure PDB',          url: `${prefix}/input.pdb` }
+		],
 		zipUrl: null,
 		lambda: metadata.struct_vs_evol_models_lambda ?? 1,
 		msaNtot: metadata.msa_Ntot ?? null,

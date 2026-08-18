@@ -19,6 +19,7 @@
 		fastaContent: string | null;
 		fastaUrl?: string | null;  // alternative to fastaContent: fetched only when Parameters is opened
 		zipUrl: string | null;
+		downloads?: { label: string; url: string; filename?: string }[];
 		lambda: number;
 		msaNtot?: number | null;
 		sigSlope?: number | null;
@@ -30,7 +31,7 @@
 		backUrl?: string;
 	}
 
-	let { mutations, multipleMutations = [], pdbUrl, fastaContent, fastaUrl = null, zipUrl, lambda, msaNtot, sigSlope, sigCenter, clipThreshold, logContent, title, subtitle, backUrl }: Props = $props();
+	let { mutations, multipleMutations = [], pdbUrl, fastaContent, fastaUrl = null, zipUrl, downloads = [], lambda, msaNtot, sigSlope, sigCenter, clipThreshold, logContent, title, subtitle, backUrl }: Props = $props();
 
 	// An MSA weighs a few MB: when only its URL is given, fetch it the first time the
 	// Parameters tab is opened instead of making every visitor pay for it
@@ -411,6 +412,18 @@
 			{/if}
 		</div>
 	</div>
+
+	<!-- Per-file downloads -->
+	{#if downloads.length > 0}
+		<div class="downloads">
+			<span class="downloads-label">Files</span>
+			{#each downloads as file}
+				<a class="dl-chip" href={file.url} download={file.filename} title="Download {file.filename ?? file.label}">
+					↓ {file.label}
+				</a>
+			{/each}
+		</div>
+	{/if}
 
 	<!-- Tabs -->
 	<div class="tabs">
@@ -875,6 +888,10 @@
 	/* Tabs */
 	.tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--border); padding-bottom: 0; }
 	.tabs-spacer { flex: 1; }
+	.downloads { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.9rem; }
+	.downloads-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: 0.25rem; }
+	.dl-chip { display: inline-flex; align-items: center; gap: 0.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 0.4rem; padding: 0.22rem 0.6rem; font-size: 0.76rem; color: var(--text-muted); text-decoration: none; transition: border-color 0.15s, color 0.15s; }
+	.dl-chip:hover { border-color: var(--accent); color: var(--accent); }
 	.tab { background: none; border: none; border-bottom: 2px solid transparent; padding: 0.5rem 1rem; font-size: 0.9rem; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: color 0.15s, border-color 0.15s; display: flex; align-items: center; gap: 0.5rem; margin-bottom: -1px; }
 	.tab:hover { color: var(--text); }
 	.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
