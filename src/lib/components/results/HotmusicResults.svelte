@@ -668,6 +668,7 @@
 				<button class="modal-close" onclick={() => (modalChart = null)} aria-label="Close">✕</button>
 			</div>
 			<div class="modal-chart-wrap"
+				role="presentation"
 				onwheel={onModalWheel}
 				onpointerdown={onModalPointerDown}
 				onpointermove={onModalPointerMove}
