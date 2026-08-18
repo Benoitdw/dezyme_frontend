@@ -62,7 +62,13 @@
 	const SCORE_LABELS: Record<ScoreKey, string> = {
 		ddg: 'ΔΔG',
 		ddgStr: 'ΔΔG (structural)',
-		ddgStrEvol: 'ΔΔG (structural+evol)'
+		ddgStrEvol: 'ΔΔG (evol)'
+	};
+
+	const SCORE_HINTS: Record<ScoreKey, string> = {
+		ddg: 'Final prediction — interpolation of the two models, weighted by λ',
+		ddgStr: 'Structure-only model — physical potentials and SaProt, without StructureDCA',
+		ddgStrEvol: 'Structure + evolution model — physical potentials, SaProt and StructureDCA'
 	};
 
 	const SS_LABELS: Record<string, string> = {
@@ -460,6 +466,7 @@
 							<button
 								class="score-btn"
 								class:active={scoreKey === key}
+								title={SCORE_HINTS[key]}
 								onclick={() => (scoreKey = key)}
 							>{SCORE_LABELS[key]}</button>
 						{/each}
@@ -668,6 +675,7 @@
 				<div class="score-selector">
 					{#each (['ddg', 'ddgStr', 'ddgStrEvol'] as ScoreKey[]) as key}
 						<button class="score-btn" class:active={summaryScoreKey === key}
+							title={SCORE_HINTS[key]}
 							onclick={() => (summaryScoreKey = key)}>{SCORE_LABELS[key]}</button>
 					{/each}
 				</div>
