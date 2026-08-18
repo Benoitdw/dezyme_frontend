@@ -9,6 +9,7 @@
 	import type { Chart as ChartType } from 'chart.js';
 	import JobLogs from '$lib/components/JobLogs.svelte';
 	import { buildHistogram, formatBinRange, binDecimals } from '$lib/utils/histogram';
+	import { plddtColor as cmPlddt, gapRatioColor as cmGapRatio } from '$lib/utils/colormaps';
 	import MultipleMutationsTrack from '$lib/components/results/MultipleMutationsTrack.svelte';
 
 	let Chart = $state<typeof ChartType | null>(null);
@@ -104,27 +105,13 @@
 	// ── Heatmap ──────────────────────────────────────────────────────────────
 	const AA_ORDER = ['A','C','D','E','F','G','H','I','K','L','M','N','P','Q','R','S','T','V','W','Y'];
 
-	function lerp(a: number, b: number, t: number): number {
-		return Math.round(a + (b - a) * t);
-	}
-
+	// Gap ratio is stored as a 0–1 fraction here, pLDDT as a 0–100 score
 	function gapColor(v: number, _vmin: number, _vmax: number, _dark: boolean): [number, number, number] {
-		const t = Math.max(0, Math.min(1, v));
-		return [lerp(50, 220, t), lerp(180, 60, t), lerp(80, 50, t)];
+		return cmGapRatio(v);
 	}
 
 	function pldtColor(v: number, _vmin: number, _vmax: number, _dark: boolean): [number, number, number] {
-		const t = Math.max(0, Math.min(1, v / 100));
-		if (t < 0.5) {
-			const s = t * 2;
-			return [lerp(220, 253, s), lerp(50, 190, s), lerp(50, 0, s)];
-		} else if (t < 0.7) {
-			const s = (t - 0.5) / 0.2;
-			return [lerp(253, 100, s), lerp(190, 170, s), lerp(0, 220, s)];
-		} else {
-			const s = (t - 0.7) / 0.3;
-			return [lerp(100, 30, s), lerp(170, 100, s), lerp(220, 200, s)];
-		}
+		return cmPlddt(v);
 	}
 
 	function scoreColorFn(_key: ScoreKey): (v: number, vmin: number, vmax: number, dark: boolean) => [number, number, number] {

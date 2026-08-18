@@ -1,4 +1,6 @@
 <script lang="ts" module>
+	import { rsaColor as cmRsa, gapRatioColor as cmGapRatio } from '$lib/utils/colormaps';
+
 	export interface HeatmapRowDef {
 		label: string;
 		values: (number | null)[];
@@ -48,16 +50,14 @@
 		return [lerp(neutral[0], 34, s), lerp(neutral[1], 197, s), lerp(neutral[2], 94, s)];
 	}
 
-	/** Orange (buried) → teal (exposed) for RSA / accessibility. */
+	/** Deep blue (buried) → white (exposed) for RSA / accessibility, in percent. */
 	export function rsaColor(v: number, _vmin: number, _vmax: number, _dark: boolean): [number, number, number] {
-		const t = Math.max(0, Math.min(1, v / 100));
-		return [lerp(210, 15, t), lerp(95, 175, t), lerp(35, 160, t)];
+		return cmRsa(v);
 	}
 
-	/** Blue (low) → red (high) for gap percentage. */
+	/** AlphaFold palette, dark blue (no gaps) → red (mostly gaps), in percent. */
 	export function gapColor(v: number, _vmin: number, _vmax: number, _dark: boolean): [number, number, number] {
-		const t = Math.max(0, Math.min(1, v / 100));
-		return [lerp(30, 215, t), lerp(130, 50, t), lerp(200, 50, t)];
+		return cmGapRatio(v / 100);
 	}
 </script>
 
