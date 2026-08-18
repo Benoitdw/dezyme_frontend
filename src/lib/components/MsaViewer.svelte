@@ -215,7 +215,8 @@
 		const vW = viewEnd - viewStart;
 		const xTicks = 8;
 		for (let i = 0; i <= xTicks; i++) {
-			const dataPos = viewStart + Math.round((i / xTicks) * vW);
+			// Positions are stored 0-indexed but displayed 1-indexed (PDB convention)
+			const dataPos = Math.min(viewEnd, viewStart + Math.round((i / xTicks) * vW) + 1);
 			const x = PAD.left + (i / xTicks) * PW;
 			ctx.fillStyle = tc;
 			ctx.fillText(String(dataPos), x, PAD.top + PH + 16);
@@ -406,7 +407,7 @@
 					top: {Math.min(hover.cssY + 8, CH - 56)}px;
 				"
 			>
-				<span class="tt-row"><span class="tt-label">Position</span><span class="tt-val">{hover.pos}</span></span>
+				<span class="tt-row"><span class="tt-label">Position</span><span class="tt-val">{hover.pos + 1}</span></span>
 				<span class="tt-row"><span class="tt-label">Coverage</span><span class="tt-val">{hover.cov.toLocaleString()} seqs · {hover.covPct.toFixed(1)}%</span></span>
 			</div>
 		{/if}
