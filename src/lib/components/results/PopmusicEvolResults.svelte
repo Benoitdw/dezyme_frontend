@@ -11,6 +11,8 @@
 	import { buildHistogram, formatBinRange, binDecimals } from '$lib/utils/histogram';
 	import { plddtColor as cmPlddt, gapRatioColor as cmGapRatio } from '$lib/utils/colormaps';
 	import MultipleMutationsTrack from '$lib/components/results/MultipleMutationsTrack.svelte';
+	import StructureAlignmentViewer from '$lib/components/results/StructureAlignmentViewer.svelte';
+	import { parseStructureAlignment } from '$lib/utils/alignment';
 
 	let Chart = $state<typeof ChartType | null>(null);
 
@@ -53,6 +55,10 @@
 			.catch((e) => { msaError = e instanceof Error ? e.message : 'fetch failed'; })
 			.finally(() => { msaLoading = false; });
 	});
+
+	// The run log prints the structure <-> MSA alignment as a wrapped text block; the
+	// Parameters tab shows it properly instead of leaving it buried in the log
+	const structAlignment = $derived(parseStructureAlignment(logContent));
 
 	const ACCENT = '#6366f1';
 
@@ -932,6 +938,24 @@
 					<p class="param-empty">No alignment file available for this run.</p>
 				{/if}
 			</div>
+
+			{#if structAlignment}
+				<div class="param-card">
+					<div class="param-card-head">
+						<div class="param-card-title">Structure &harr; MSA alignment</div>
+						<span class="param-card-note">
+							{(structAlignment.identity * 100).toFixed(structAlignment.length > 1000 ? 2 : 1)}% identity
+							over {structAlignment.length} positions
+						</span>
+					</div>
+					<p class="param-lead">
+						Predictions combine per-residue structural properties with the evolutionary signal of the
+						MSA, so both must refer to the same residue. This is the mapping computed for this run
+						between the modelled chain and the MSA target sequence.
+					</p>
+					<StructureAlignmentViewer alignment={structAlignment} />
+				</div>
+			{/if}
 		</div>
 	{/if}
 
