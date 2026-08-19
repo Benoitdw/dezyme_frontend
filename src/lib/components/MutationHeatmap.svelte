@@ -62,6 +62,7 @@
 </script>
 
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { theme } from '$lib/stores/theme';
 
 	interface Props {
@@ -385,7 +386,7 @@
 		const PW = canvas!.width - PAD_LEFT - padRight;
 		const frac = Math.max(0, Math.min(1, (cssX - PAD_LEFT) / PW));
 		const vW = viewEnd - viewStart;
-		const factor = e.deltaY > 0 ? 0.77 : 1.3;  // wheel down zooms in
+		const factor = e.deltaY > 0 ? 1.3 : 0.77;  // wheel down zooms out
 		const newW = Math.max(5, Math.min(positions.length, Math.round(vW * factor)));
 		const anchor = viewStart + frac * vW;
 		let newStart = Math.round(anchor - frac * newW);
@@ -463,27 +464,36 @@
 		const ro = new ResizeObserver((entries) => {
 			const w = Math.floor(entries[0].contentRect.width);
 			if (w === cw || w === 0) return;
-			cw = w;
-			if (canvas) { canvas.width = w; redraw(); }
+			cw = w;   // the effect below resizes the canvas and repaints
 		});
 		ro.observe(container);
 		return () => ro.disconnect();
 	});
 
+	// Everything that changes what is on screen goes through here. redraw() itself reads
+	// state (the selection among others), so it runs untracked: otherwise selecting a
+	// column would re-run this effect and throw the zoom away.
+	let columnCount = -1;
 	$effect(() => {
-		void positions, headerRows, dataRows, ch, cw;
-		if (!canvas) return;
-		canvas.width  = cw;
-		canvas.height = ch;
-		viewStart = 0;
-		viewEnd   = positions.length;
-		isZoomed  = false;
-		redraw();
-	});
+		void positions, headerRows, dataRows, selectedCol, selectedCols, gapIndices, colorbar, ch, cw, $theme;
+		untrack(() => {
+			if (!canvas) return;
+			if (canvas.width  !== cw) canvas.width  = cw;
+			if (canvas.height !== ch) canvas.height = ch;
 
-	$effect(() => {
-		void selectedCol, $theme;
-		redraw();
+			if (positions.length !== columnCount) {
+				// New dataset: start from the full view
+				columnCount = positions.length;
+				viewStart = 0;
+				viewEnd   = positions.length;
+			} else {
+				// Same columns: keep the window the user zoomed into
+				viewEnd   = Math.min(viewEnd, positions.length);
+				viewStart = Math.max(0, Math.min(viewStart, viewEnd - 1));
+			}
+			isZoomed = viewEnd - viewStart < positions.length;
+			redraw();
+		});
 	});
 </script>
 
