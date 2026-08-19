@@ -122,7 +122,7 @@
 		<span class="hint">
 			{unitLabel}: <strong>{formatStoichiometry(chainCopies)}</strong>
 			{#if Object.values(chainCopies).some((n) => n > 1)}
-				&nbsp;·&nbsp; a duplicated chain is selected once, the other copies are shown faded in the viewer
+				&nbsp;·&nbsp; a duplicated chain is selected once, the other copies stay grey in the viewer
 			{/if}
 		</span>
 	{/if}

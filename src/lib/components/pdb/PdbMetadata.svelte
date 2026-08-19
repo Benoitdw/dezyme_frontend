@@ -40,10 +40,6 @@
 		return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [99, 102, 241];
 	}
 
-	function mix(color: number[], towards: number[], amount: number): number[] {
-		return color.map((v, i) => Math.round(v + (towards[i] - v) * amount));
-	}
-
 	onMount(() => {
 		if (!hasContent) return;
 
@@ -77,17 +73,16 @@
 	$effect(() => {
 		if (!viewer || meta.chains.length === 0) return;
 		const selectedColor = hexToRgb(accent);
-		const background = getBgColor();
 		const copies = meta.chainCopies ?? {};
 		const map: Record<string, number[]> = {};
 		for (const chain of meta.chains) {
-			const chainColor = selectedChains.includes(chain) ? selectedColor : DIMMED_COLOR;
+			const isSelected = selectedChains.includes(chain);
 			const chainCopies = Math.max(copies[chain] ?? 1, 1);
 			for (let copy = 1; copy <= chainCopies; copy++) {
-				// Only the first copy carries the full color: the extra copies are the
-				// same chain, faded, to show they are not the one being analysed
-				const fade = copy === 1 ? 0 : Math.min(0.45 + 0.15 * (copy - 2), 0.75);
-				map[copy === 1 ? chain : `${chain}#${copy}`] = mix(chainColor, background, fade);
+				// Only the copy being analysed is colored — every other chain, and every
+				// extra copy of the selected one, stays grey
+				map[copy === 1 ? chain : `${chain}#${copy}`] =
+					isSelected && copy === 1 ? selectedColor : DIMMED_COLOR;
 			}
 		}
 		viewer.setColorsMap(map);

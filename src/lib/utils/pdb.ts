@@ -102,24 +102,15 @@ export function parseChainCopies(content: string, countModels = false): ChainCop
 	return copies;
 }
 
-const SUBSCRIPT_DIGITS = '₀₁₂₃₄₅₆₇₈₉';
-
-// 'A₂B₂' — compact stoichiometry of a unit, or a plain count when too long to read
+// 'AABB' — the chains of a unit spelled out, or a plain count when too long to read
 export function formatStoichiometry(copies: ChainCopies): string {
 	const chains = Object.keys(copies).sort();
 	if (chains.length === 0) return '';
-	if (chains.length > 6) {
-		const total = chains.reduce((sum, c) => sum + copies[c], 0);
+	const total = chains.reduce((sum, c) => sum + copies[c], 0);
+	if (chains.length > 6 || total > 12) {
 		return `${chains.length} chains, ${total} copies`;
 	}
-	return chains
-		.map((chain) => {
-			const n = copies[chain];
-			if (n <= 1) return chain;
-			const sub = String(n).split('').map((d) => SUBSCRIPT_DIGITS[Number(d)]).join('');
-			return chain + sub;
-		})
-		.join('');
+	return chains.map((chain) => chain.repeat(copies[chain])).join('');
 }
 
 // Index of the biological unit an uploaded file holds, from its extension (.pdb1, .pdb2, …)
