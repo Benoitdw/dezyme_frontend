@@ -32,30 +32,53 @@
 	let loadError = $state<string | null>(null);
 	let spinning = $state(false);
 
-	// `on` drives the blink: the highlight alternates between a wide halo and a tight one
-	function applyStyles(res: ResidueStyle[], on = true) {
+	// Repainting the whole protein costs one 3Dmol atom scan per call, which is slow
+	// on large structures. The base coloring is therefore rebuilt only when the colors
+	// change; selecting or clearing only restyles the residues that moved.
+	const BASE_COLOR = '#cbd5e1';
+	const specOf = (r: ResidueStyle) => ({ chain: r.chain, resi: r.resNum });
+	const keyOf  = (r: ResidueStyle) => `${r.chain}:${r.resNum}`;
+
+	let baseSignature: string | null = null;
+	let shownSelection: ResidueStyle[] = [];
+
+	function applyBase(res: ResidueStyle[]) {
 		if (!viewer) return;
 		// Base: full protein as light-grey cartoon
-		viewer.setStyle({}, { cartoon: { color: '#cbd5e1', opacity: 0.9 } });
+		viewer.setStyle({}, { cartoon: { color: BASE_COLOR, opacity: 0.9 } });
 
-		// Per-residue color from supplied list
+		// One pass per (chain, color) rather than one per residue
+		const groups = new Map<string, { chain: string; color: string; resi: number[] }>();
 		for (const r of res) {
-			viewer.addStyle(
-				{ chain: r.chain, resi: r.resNum },
-				{ cartoon: { color: r.color } }
-			);
+			const g = groups.get(`${r.chain}|${r.color}`);
+			if (g) g.resi.push(r.resNum);
+			else groups.set(`${r.chain}|${r.color}`, { chain: r.chain, color: r.color, resi: [r.resNum] });
+		}
+		for (const g of groups.values()) {
+			viewer.addStyle({ chain: g.chain, resi: g.resi }, { cartoon: { color: g.color } });
+		}
+		shownSelection = [];
+	}
+
+	function drawSelection(res: ResidueStyle[]) {
+		if (!viewer) return;
+		const selected = res.filter((r) => r.selected);
+		const stillSelected = new Set(selected.map(keyOf));
+
+		// Residues that left the selection go back to their own color. setStyle replaces,
+		// so the stick and the halo of the highlight go away with it.
+		for (const prev of shownSelection) {
+			if (stillSelected.has(keyOf(prev))) continue;
+			viewer.setStyle(specOf(prev), { cartoon: { color: prev.color } });
 		}
 
-		// Selected residues are drawn last, so they always sit on top
-		for (const sel of res.filter((r) => r.selected)) {
-			const spec = { chain: sel.chain, resi: sel.resNum };
-			viewer.addStyle(spec, { cartoon: { color: highlightColor } });
+		for (const sel of selected) {
+			const spec = specOf(sel);
+			viewer.setStyle(spec, { cartoon: { color: highlightColor } });
 			viewer.addStyle(spec, { stick: { color: highlightColor, radius: 0.3 } });
-			viewer.addStyle(spec, {
-				sphere: { color: highlightColor, opacity: on ? 0.5 : 0.22, radius: on ? 2.6 : 1.5 }
-			});
+			viewer.addStyle(spec, { sphere: { color: highlightColor, opacity: 0.5, radius: 2.6 } });
 		}
-		viewer.render();
+		shownSelection = selected;
 	}
 
 	// The label follows the hover, wherever it comes from: table, heatmap or the
@@ -74,40 +97,18 @@
 		viewer.render();
 	});
 
-	// A short blink on each new selection: a handful of restyles, not a render loop
-	const BLINK_STEPS = 6;
-	const BLINK_MS = 320;
-	let blinkTimer: ReturnType<typeof setInterval> | null = null;
-
-	function blinkSelection(res: ResidueStyle[]) {
-		if (blinkTimer) clearInterval(blinkTimer);
-		let step = 0;
-		applyStyles(res, true);
-		blinkTimer = setInterval(() => {
-			step += 1;
-			if (step >= BLINK_STEPS) {
-				clearInterval(blinkTimer!);
-				blinkTimer = null;
-				applyStyles(res, true);   // settle on the visible state
-				return;
-			}
-			applyStyles(res, step % 2 === 0);
-		}, BLINK_MS);
-	}
-
 	// Re-apply styles reactively whenever residues prop changes
-	let lastSelectedKey: string | null = null;
 	$effect(() => {
 		const r = residues; // create reactive dependency
 		if (!viewer) return;
-		const key = r.filter((x) => x.selected).map((x) => `${x.chain}${x.resNum}`).join(',') || null;
-		if (key && key !== lastSelectedKey) {
-			lastSelectedKey = key;
-			blinkSelection(r);
-		} else {
-			lastSelectedKey = key;
-			applyStyles(r, true);
+
+		const signature = r.map((x) => `${x.chain}${x.resNum}${x.color}`).join('|');
+		if (signature !== baseSignature) {
+			baseSignature = signature;
+			applyBase(r);
 		}
+		drawSelection(r);
+		viewer.render();
 	});
 
 	onMount(async () => {
@@ -156,7 +157,6 @@
 	});
 
 	onDestroy(() => {
-		if (blinkTimer) clearInterval(blinkTimer);
 		resizeObserver?.disconnect();
 		viewer?.clear();
 	});
