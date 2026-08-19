@@ -12,7 +12,6 @@
 
 	let { meta, selectedChains = [], accent = '#6366f1' }: Props = $props();
 
-	let viewerEl = $state<HTMLAnchorElement | undefined>();
 	let viewer = $state<any>(null);
 	const hasContent = $derived(!!meta.pdbContent);
 	const viewerId = `lp-${Math.random().toString(36).slice(2)}`;
@@ -176,16 +175,15 @@
 	</div>
 
 	{#if hasContent}
-		<a
-			class="viewer-wrap"
-			bind:this={viewerEl}
-			href="https://github.com/MatsveiTsishyn/LittleProtein"
-			target="_blank"
-			rel="noopener noreferrer"
-			aria-label="Powered by LittleProtein"
-		>
-			<div id={viewerId}></div>
-		</a>
+		<div class="viewer-col">
+			<div class="viewer-wrap">
+				<div id={viewerId}></div>
+			</div>
+			<span class="viewer-credit">
+				Rendered with
+				<a href="https://github.com/MatsveiTsishyn/LittleProtein" target="_blank" rel="noopener noreferrer">LittleProtein</a>
+			</span>
+		</div>
 	{/if}
 </div>
 
@@ -260,21 +258,39 @@
 		border-color: var(--text-muted);
 	}
 
+	.viewer-col {
+		flex-shrink: 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.3rem;
+	}
+
 	.viewer-wrap {
 		width: 180px;
 		height: 180px;
-		flex-shrink: 0;
 		border-radius: 0.5rem;
 		overflow: hidden;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		cursor: pointer;
-		transition: opacity 0.15s;
 	}
 
-	.viewer-wrap:hover {
-		opacity: 0.85;
+	.viewer-credit {
+		font-size: 0.65rem;
+		color: var(--text-muted);
+		opacity: 0.8;
+	}
+
+	.viewer-credit a {
+		color: inherit;
+		text-decoration: none;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.viewer-credit a:hover {
+		color: var(--text);
+		border-bottom-color: var(--text-muted);
 	}
 
 	.viewer-wrap :global(canvas) {
@@ -288,10 +304,14 @@
 			align-items: stretch;
 		}
 
+		.viewer-col {
+			width: 100%;
+			order: 1;
+		}
+
 		.viewer-wrap {
 			width: 100%;
 			height: 200px;
-			order: 1;
 		}
 
 		.meta-rows {
