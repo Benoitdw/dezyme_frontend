@@ -146,7 +146,20 @@
 		{/if}
 		<div class="meta-row">
 			<span class="meta-label">Chains</span>
-			<span class="meta-value">{meta.chains.join(', ')}</span>
+			<span class="meta-value meta-value--chains">
+				{#each meta.chains as chain, i (chain)}
+					{@const info = meta.chainInfo?.[chain]}
+					<span class="chain-tag" class:has-info={!!info}>
+						{chain}
+						{#if info}
+							<span class="chain-tip">
+								{#if info.name}<span class="chain-tip-name">{info.name}</span>{/if}
+								<span class="chain-tip-len">{info.length} residues</span>
+							</span>
+						{/if}
+					</span>{#if i < meta.chains.length - 1}<span class="chain-sep">,</span>{/if}
+				{/each}
+			</span>
 		</div>
 		{#if meta.residueCount !== undefined}
 			<div class="meta-row">
@@ -233,6 +246,61 @@
 		overflow: visible;
 		text-overflow: unset;
 		line-height: 1.4;
+	}
+
+	.meta-value--chains {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.15rem;
+		overflow: visible;   /* the hover card must not be clipped by the row */
+	}
+
+	.chain-sep {
+		margin-right: 0.25rem;
+	}
+
+	.chain-tag {
+		position: relative;
+	}
+
+	.chain-tag.has-info {
+		cursor: help;
+		border-bottom: 1px dotted var(--text-muted);
+	}
+
+	.chain-tip {
+		position: absolute;
+		bottom: calc(100% + 6px);
+		left: -0.4rem;
+		z-index: 5;
+		display: none;
+		flex-direction: column;
+		gap: 0.1rem;
+		width: max-content;
+		max-width: 240px;
+		padding: 0.35rem 0.55rem;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 0.4rem;
+		box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
+		/* the row is monospace, the hover card reads better in the page font */
+		font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		white-space: normal;
+		line-height: 1.35;
+	}
+
+	.chain-tag:hover .chain-tip {
+		display: flex;
+	}
+
+	.chain-tip-name {
+		font-size: 0.75rem;
+		color: var(--text);
+	}
+
+	.chain-tip-len {
+		font-size: 0.7rem;
+		color: var(--text-muted);
 	}
 
 	.meta-value--links {
