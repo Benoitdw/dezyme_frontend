@@ -13,8 +13,8 @@
 	];
 
 	interface Row { identity: number; start: number; end: number; seq: string }
-	interface Computed { rows: Row[]; coverage: Float32Array; L: number; N: number; maxCov: number }
-	interface HoverInfo { cssX: number; cssY: number; pos: number; cov: number; covPct: number }
+	interface Computed { rows: Row[]; coverage: Float32Array; L: number; N: number; maxCov: number; query: string }
+	interface HoverInfo { cssX: number; cssY: number; pos: number; aa: string; cov: number; covPct: number }
 
 	interface Props { msaContent: string }
 	let { msaContent }: Props = $props();
@@ -114,7 +114,7 @@
 		}
 		const maxCov = Math.max(...coverage);
 
-		return { rows, coverage, L, N: rows.length, maxCov };
+		return { rows, coverage, L, N: rows.length, maxCov, query };
 	}
 
 	// ── Heatmap render ────────────────────────────────────────────────────────
@@ -332,7 +332,11 @@
 		const vW = viewEnd - viewStart;
 		const pos = Math.min(L - 1, Math.max(0, Math.round(viewStart + (cx / PW) * vW)));
 		const cov = Math.round(coverage[pos] ?? 0);
-		hover = { cssX: toCssX(e), cssY: toCssY(e), pos, cov, covPct: data.N > 0 ? (cov / data.N) * 100 : 0 };
+		hover = {
+			cssX: toCssX(e), cssY: toCssY(e), pos,
+			aa: data.query[pos] ?? '',
+			cov, covPct: data.N > 0 ? (cov / data.N) * 100 : 0
+		};
 		renderOverlay();
 	}
 
@@ -407,7 +411,13 @@
 					top: {Math.min(hover.cssY + 8, CH - 56)}px;
 				"
 			>
-				<span class="tt-row"><span class="tt-label">Position</span><span class="tt-val">{hover.pos + 1}</span></span>
+				<span class="tt-row">
+					<span class="tt-label">Position</span>
+					<span class="tt-val">
+						{hover.pos + 1}
+						{#if hover.aa}<span class="tt-aa" title="Residue of the reference sequence">{hover.aa}</span>{/if}
+					</span>
+				</span>
 				<span class="tt-row"><span class="tt-label">Coverage</span><span class="tt-val">{hover.cov.toLocaleString()} seqs · {hover.covPct.toFixed(1)}%</span></span>
 			</div>
 		{/if}
@@ -494,6 +504,7 @@
 	}
 
 	.tt-label { color: var(--text-muted, #888); }
+	.tt-aa    { color: var(--text-muted, #888); font-weight: 400; margin-left: 0.15rem; }
 	.tt-val   { color: var(--text, #111); font-family: monospace; font-weight: 600; }
 
 	.footer {

@@ -270,7 +270,16 @@
 
 			{#if tool.multipleMutations && pdbMeta}
 				<section class="section">
-					<span class="section-label">Add Multiple mutations <span class="section-optional">optional</span></span>
+					<span class="section-label">
+						Add Multiple mutations <span class="section-optional">optional</span>
+						<span class="info-icon">ℹ<span class="tooltip">
+							Every single-site mutation of every position is computed by default, so nothing needs to
+							be listed here for them. This field is for <strong>multiple mutations</strong> —
+							substitutions applied together, whose combined effect is reported as one entry. Single
+							mutations can be listed here too: they then get their own row in the results, which makes
+							the ones you care about easier to find.
+						</span></span>
+					</span>
 					<MultipleMutationsInput
 						chain={selectedChains[0]}
 						onchange={(m, msaRef) => { multipleMutations = m; mutationMsaReference = msaRef; }}
@@ -432,6 +441,9 @@
 	}
 
 	.section-label {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
 		font-size: 0.8rem;
 		font-weight: 600;
 		text-transform: uppercase;
@@ -512,6 +524,61 @@
 	.field-hint {
 		font-size: 0.78rem;
 		color: var(--text-muted);
+	}
+
+	.info-icon {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1rem;
+		height: 1rem;
+		font-size: 0.65rem;
+		border-radius: 50%;
+		border: 1px solid var(--border);
+		color: var(--text-muted);
+		cursor: default;
+		flex-shrink: 0;
+		user-select: none;
+		vertical-align: middle;
+	}
+
+	.info-icon:hover {
+		border-color: var(--text-muted);
+		color: var(--text);
+	}
+
+	.info-icon .tooltip {
+		display: none;
+		position: absolute;
+		left: 50%;
+		bottom: calc(100% + 0.5rem);
+		transform: translateX(-50%);
+		width: 22rem;
+		max-width: calc(100vw - 2rem);
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 0.5rem;
+		padding: 0.65rem 0.8rem;
+		font-size: 0.78rem;
+		font-weight: 400;
+		text-transform: none;
+		letter-spacing: 0;
+		line-height: 1.5;
+		color: var(--text-muted);
+		box-shadow: 0 4px 16px rgb(0 0 0 / 0.12);
+		pointer-events: none;
+		z-index: 100;
+		white-space: normal;
+	}
+
+	.info-icon .tooltip strong {
+		color: var(--text);
+		font-weight: 600;
+	}
+
+	.info-icon:hover .tooltip {
+		display: block;
 	}
 
 	.field-error {
