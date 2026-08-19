@@ -68,7 +68,7 @@
 	const SCORE_LABELS: Record<ScoreKey, string> = {
 		ddg: 'ΔΔG',
 		ddgStr: 'ΔΔG (structural)',
-		ddgStrEvol: 'ΔΔG (evol)'
+		ddgStrEvol: 'ΔΔG (structural+evol)'
 	};
 
 	const SCORE_HINTS: Record<ScoreKey, string> = {
