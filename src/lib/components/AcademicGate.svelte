@@ -1,30 +1,36 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { browser } from '$app/environment';
 	import { base } from '$app/paths';
 
-	const STORAGE_KEY = 'dezyme_academic_confirmed';
-
-	let visible = $state(false);
-
-	if (browser && !localStorage.getItem(STORAGE_KEY)) {
-		visible = true;
+	interface Props {
+		open: boolean;
+		onAcademic: () => void;
+		onCancel: () => void;
 	}
 
-	function confirmAcademic() {
-		localStorage.setItem(STORAGE_KEY, '1');
-		visible = false;
-	}
+	let { open, onAcademic, onCancel }: Props = $props();
 
 	function goCommercial() {
-		visible = false;
+		onCancel();
 		goto(`${base}/license`);
+	}
+
+	function onKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape') onCancel();
 	}
 </script>
 
-{#if visible}
-	<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="gate-title">
-		<div class="modal">
+<svelte:window onkeydown={open ? onKeydown : undefined} />
+
+{#if open}
+	<div
+		class="overlay"
+		role="presentation"
+		onclick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+	>
+		<div class="modal" role="dialog" aria-modal="true" aria-labelledby="gate-title">
+			<button class="close" onclick={onCancel} aria-label="Cancel">&times;</button>
+
 			<div class="dna-icon" aria-hidden="true">
 				<svg viewBox="0 0 48 80" fill="none" xmlns="http://www.w3.org/2000/svg" width="36">
 					<path d="M16 6 C10 18, 22 28, 16 40 C10 52, 22 62, 16 74" stroke="#2563eb" stroke-width="3" stroke-linecap="round" fill="none"/>
@@ -37,13 +43,13 @@
 				</svg>
 			</div>
 
-			<h2 id="gate-title">Welcome to Dezyme</h2>
+			<h2 id="gate-title">Before running this analysis</h2>
 			<p class="subtitle">Protein mutation analysis tools by the <strong>3BIO-BioInfo Laboratory</strong></p>
 
-			<p class="question">Are you using Dezyme for academic or research purposes?</p>
+			<p class="question">Are you running this analysis for academic or research purposes?</p>
 
 			<div class="actions">
-				<button class="btn-primary" onclick={confirmAcademic}>
+				<button class="btn-primary" onclick={onAcademic}>
 					Yes, Academic / Research Use
 				</button>
 				<button class="btn-secondary" onclick={goCommercial}>
@@ -73,6 +79,7 @@
 	}
 
 	.modal {
+		position: relative;
 		background: var(--surface);
 		border: 1px solid var(--border);
 		border-radius: 1.25rem;
@@ -85,6 +92,24 @@
 		gap: 1rem;
 		text-align: center;
 		box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+	}
+
+	.close {
+		position: absolute;
+		top: 0.75rem;
+		right: 1rem;
+		background: none;
+		border: none;
+		color: var(--text-muted);
+		font-size: 1.6rem;
+		line-height: 1;
+		cursor: pointer;
+		padding: 0.25rem;
+		transition: color 0.15s;
+	}
+
+	.close:hover {
+		color: var(--text);
 	}
 
 	.dna-icon {

@@ -2,7 +2,6 @@
 	import '../app.css';
 	import Navbar from '$lib/components/Navbar.svelte';
 	import Footer from '$lib/components/Footer.svelte';
-	import AcademicGate from '$lib/components/AcademicGate.svelte';
 	let { children } = $props();
 </script>
 
@@ -11,7 +10,6 @@
 	<meta name="description" content="Protein mutation analysis tools" />
 </svelte:head>
 
-<AcademicGate />
 <Navbar />
 <main>
 	{@render children()}

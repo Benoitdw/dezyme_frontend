@@ -15,6 +15,7 @@
 	import MultipleMutationsInput from '$lib/components/MultipleMutationsInput.svelte';
 	import MsaInput from '$lib/components/MsaInput.svelte';
 	import DiffuseSineHorizon from '$lib/components/DiffuseSineHorizon.svelte';
+	import AcademicGate from '$lib/components/AcademicGate.svelte';
 
 	let selectedTool = $state<ToolId>(($page.url.searchParams.get('tool') as ToolId) ?? 'popmusic');
 	let pdbMeta = $state<PdbMeta | null>(null);
@@ -31,6 +32,7 @@
 	let msaContent = $state<string | null>(null);
 	let msaFilename = $state<string | null>(null);
 	let biologicalAssembly = $state<number | null>(null);
+	let gateOpen = $state(false);
 
 
 	function validateField(name: string, raw: string) {
@@ -107,6 +109,19 @@
 		pdbError = msg;
 		pdbMeta = null;
 		selectedChains = [];
+	}
+
+	// The academic/commercial gate is shown on every run, deliberately without
+	// any persistence: each analysis must be attributed to a declared usage.
+	function requestSubmit() {
+		if (!pdbMeta || selectedChains.length === 0) return;
+		submitError = null;
+		gateOpen = true;
+	}
+
+	function onAcademicConfirmed() {
+		gateOpen = false;
+		handleSubmit();
 	}
 
 	async function handleSubmit() {
@@ -304,7 +319,7 @@
 			<button
 				class="submit-btn"
 				style="--accent: {tool.accent}"
-				onclick={handleSubmit}
+				onclick={requestSubmit}
 				disabled={!pdbMeta || selectedChains.length === 0 || submitting || hasFieldErrors || (tool.requiresMsa && !msaContent)}
 				type="button"
 			>
@@ -313,6 +328,8 @@
 		{/if}
 	</div>
 </div>
+
+<AcademicGate open={gateOpen} onAcademic={onAcademicConfirmed} onCancel={() => (gateOpen = false)} />
 
 <style>
 	.page {
