@@ -19,8 +19,9 @@
 
 	const analysisId = $page.params.id ?? '';
 
-	let status    = $state<JobStatus>('pending');
+	let status    = $state<JobStatus>('waiting');
 	let error     = $state<string | null>(null);
+	let queuePosition = $state<number | null>(null);
 	let payload   = $state<JobPayloadSummary | null>(null);
 	let notFound  = $state(false);
 	let tool    = $derived(payload ? tools[payload.tool] : null);
@@ -142,6 +143,7 @@
 			if (res === null) { notFound = true; stopAll(); return; }
 			const prev = status;
 			status = res.status;
+			queuePosition = res.queue_position ?? null;
 			if (res.error) error = res.error;
 
 			if (status === 'running') {
@@ -251,8 +253,21 @@
 			</div>
 			<JobLogs content={jobLog} />
 		{:else}
-			<ProteinPending label={status === 'running' ? 'Running…' : 'Pending…'} />
-			<JobLogs content={jobLog} />
+			{#if status === 'running'}
+				<ProteinPending label="Running…" />
+				<JobLogs content={jobLog} />
+			{:else}
+				<ProteinPending label={queuePosition ? `In the queue: position ${queuePosition}` : 'Waiting…'} />
+				{#if queuePosition}
+					<p class="queue-note">
+						{#if queuePosition === 1}
+							Your analysis is next and starts as soon as the running one finishes.
+						{:else}
+							{queuePosition - 1} {queuePosition === 2 ? 'analysis' : 'analyses'} ahead of yours. It starts automatically, you can leave this page and come back.
+						{/if}
+					</p>
+				{/if}
+			{/if}
 
 			{#if payload}
 				<div class="payload-section">
@@ -298,6 +313,7 @@
 	.status-icon { font-size: 1.5rem; color: #ef4444; }
 	.status-text { font-size: 1rem; font-weight: 600; color: var(--text); }
 	.status-sub { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem; }
+	.queue-note { text-align: center; font-size: 0.85rem; color: var(--text-muted); margin: -0.5rem 0 1rem; }
 	.payload-section { display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-start; }
 	.payload-toggle { background: none; border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.4rem 0.875rem; font-size: 0.82rem; color: var(--text-muted); cursor: pointer; transition: border-color 0.15s, color 0.15s; }
 	.payload-toggle:hover { border-color: var(--text-muted); color: var(--text); }

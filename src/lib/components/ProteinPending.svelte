@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import * as THREE from 'three';
 
-	let { label = 'Pending…' }: { label?: string } = $props();
+	let { label = 'Waiting…' }: { label?: string } = $props();
 
 	let canvas: HTMLCanvasElement;
 	let cleanup: (() => void) | null = null;

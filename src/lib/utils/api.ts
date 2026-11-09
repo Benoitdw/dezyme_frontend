@@ -1,7 +1,7 @@
 import { base } from '$app/paths';
 import type { ToolId } from '$lib/tools/types';
 
-export type JobStatus = 'pending' | 'running' | 'done' | 'error';
+export type JobStatus = 'waiting' | 'running' | 'done' | 'error';
 
 export interface SubmitPayload {
 	tool: ToolId;
@@ -19,6 +19,8 @@ export interface JobStatusResponse {
 	analysis_id: string;
 	status: JobStatus;
 	error?: string;
+	/** While waiting: 1 = next to start. */
+	queue_position?: number | null;
 }
 
 export interface JobPayloadSummary {
