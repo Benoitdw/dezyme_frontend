@@ -1,3 +1,4 @@
+import { base } from '$app/paths';
 import type { ToolId } from '$lib/tools/types';
 
 export type JobStatus = 'pending' | 'running' | 'done' | 'error';
@@ -45,7 +46,9 @@ export interface HotMusicResultUrls {
 	pdb: string | null;
 }
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+// Not import.meta.env.BASE_URL: in the static build it is relative ("./"), so
+// from /dezyme/results/<id> the API resolved to /dezyme/results/api/... .
+const BASE = base;
 const API = `${BASE}/api`;
 
 export async function submitAnalysis(payload: SubmitPayload): Promise<string> {
